@@ -1,0 +1,74 @@
+Layout basics
+.app-root { display: flex; min-height: 100vh; }
+
+/* Topbar */
+.topbar {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  background:#fff;
+  border-bottom:1px solid #eee;
+  width:100%;
+}
+.mobile-toggle { font-size:20px; background:none; border:none; cursor:pointer; }
+.brand { font-weight:600; }
+
+/* Overlay backdrop */
+.overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease;
+  z-index: 30;
+}
+.overlay.show { opacity:1; pointer-events:auto; }
+
+/* Sidebar (mobile hidden by default via transform) */
+.sidebar {
+  position:fixed;
+  top:0;
+  left:0;
+  height:100vh;
+  width:260px;
+  background:#fff;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transform: translateX(-110%);
+  transition: transform .22s ease;
+  z-index: 40;
+  padding:16px;
+}
+.sidebar.open { transform: translateX(0); }
+.close-btn {
+  font-size:20px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  display:inline-block;
+  margin-bottom:12px;
+}
+
+/* Main content sits to the right on desktop */
+.content {
+  flex:1;
+  padding:20px;
+  margin-left:0; /* adjusted on desktop below */
+}
+
+/* Desktop: show sidebar statically and hide overlay & mobile toggle */
+@media (min-width: 768px) {
+  .overlay { display:none; }
+  .mobile-toggle { display:none; }
+  .sidebar {
+    position:static;
+    transform:none;
+    width:260px;
+    height:auto;
+    box-shadow:none;
+  }
+  .app-root { align-items:flex-start; }
+  .content { margin-left: 0; /* content already flexes */ }
+}
+

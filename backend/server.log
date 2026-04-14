@@ -1,0 +1,405 @@
+
+> computex-backend@0.1.0 start
+> node index.js
+
+{"level":30,"time":1774008938899,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"ComputeX backend build 2026-03-20T12:15:38.899Z | agent-link-logging"}
+{"level":30,"time":1774008938900,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"Agent link logging enabled"}
+{"level":30,"time":1774008938922,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"Server listening at http://0.0.0.0:8080"}
+{"level":30,"time":1774008938923,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"ComputeX backend listening on 8080"}
+{"level":30,"time":1774008942231,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008942237,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1","res":{"statusCode":204},"responseTime":5.483500003814697,"msg":"request completed"}
+{"level":30,"time":1774008942239,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008942241,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008942303,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2","res":{"statusCode":200},"responseTime":63.671999998390675,"msg":"request completed"}
+{"level":30,"time":1774008943591,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3","req":{"method":"GET","url":"/health","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":57740},"msg":"incoming request"}
+{"level":30,"time":1774008943594,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3","res":{"statusCode":200},"responseTime":3.148699998855591,"msg":"request completed"}
+{"level":30,"time":1774008973704,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008973710,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4","res":{"statusCode":204},"responseTime":4.118600003421307,"msg":"request completed"}
+{"level":30,"time":1774008973716,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-5","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008973716,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008973786,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-5","res":{"statusCode":200},"responseTime":69.70489999651909,"msg":"request completed"}
+{"level":30,"time":1774008978463,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-6","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_a0f52999-0","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008978464,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-6","res":{"statusCode":204},"responseTime":1.1840000003576279,"msg":"request completed"}
+{"level":30,"time":1774008978466,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-7","req":{"method":"DELETE","url":"/api/admin/hosts/hst_a0f52999-0","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008978472,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-7","res":{"statusCode":200},"responseTime":5.6151000037789345,"msg":"request completed"}
+{"level":30,"time":1774008978477,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-8","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008978477,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008978536,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-8","res":{"statusCode":200},"responseTime":58.8973999992013,"msg":"request completed"}
+{"level":30,"time":1774008980008,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-9","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_f46e6127-d","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008980010,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-9","res":{"statusCode":204},"responseTime":1.4250999987125397,"msg":"request completed"}
+{"level":30,"time":1774008980011,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-a","req":{"method":"DELETE","url":"/api/admin/hosts/hst_f46e6127-d","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008980019,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-a","res":{"statusCode":200},"responseTime":7.04729999601841,"msg":"request completed"}
+{"level":30,"time":1774008980022,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-b","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008980023,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-b","res":{"statusCode":204},"responseTime":0.4592000022530556,"msg":"request completed"}
+{"level":30,"time":1774008980025,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-c","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008980025,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008980060,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-c","res":{"statusCode":200},"responseTime":35.55969999730587,"msg":"request completed"}
+{"level":30,"time":1774008981590,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-d","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008981590,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008981645,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-d","res":{"statusCode":200},"responseTime":55.23020000010729,"msg":"request completed"}
+{"level":30,"time":1774008990116,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-e","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_99bf9504-8/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008990117,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-e","res":{"statusCode":204},"responseTime":0.6260999962687492,"msg":"request completed"}
+{"level":30,"time":1774008990119,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-f","req":{"method":"POST","url":"/api/admin/hosts/hst_99bf9504-8/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008990146,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-f","res":{"statusCode":200},"responseTime":26.65479999780655,"msg":"request completed"}
+{"level":30,"time":1774008990149,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-g","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008990150,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-g","res":{"statusCode":204},"responseTime":0.6972999945282936,"msg":"request completed"}
+{"level":30,"time":1774008990152,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-h","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008990152,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008990187,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-h","res":{"statusCode":200},"responseTime":35.06369999796152,"msg":"request completed"}
+{"level":30,"time":1774008991587,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-i","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008991587,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008991647,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-i","res":{"statusCode":200},"responseTime":59.10040000081062,"msg":"request completed"}
+{"level":30,"time":1774008995232,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-j","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_99bf9504-8","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008995232,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-j","res":{"statusCode":204},"responseTime":0.49220000207424164,"msg":"request completed"}
+{"level":30,"time":1774008995234,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-k","req":{"method":"DELETE","url":"/api/admin/hosts/hst_99bf9504-8","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008995245,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-k","res":{"statusCode":200},"responseTime":10.943199999630451,"msg":"request completed"}
+{"level":30,"time":1774008995249,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-l","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008995250,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-l","res":{"statusCode":204},"responseTime":0.8849999979138374,"msg":"request completed"}
+{"level":30,"time":1774008995252,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-m","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774008995253,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774008995300,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-m","res":{"statusCode":200},"responseTime":47.34800000488758,"msg":"request completed"}
+{"level":30,"time":1774009001591,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-n","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009001592,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-n","res":{"statusCode":204},"responseTime":0.6036000028252602,"msg":"request completed"}
+{"level":30,"time":1774009001593,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-o","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009001594,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009001631,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-o","res":{"statusCode":200},"responseTime":37.45660000294447,"msg":"request completed"}
+{"level":30,"time":1774009003240,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-p","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_bae3249c-1/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009003241,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-p","res":{"statusCode":204},"responseTime":0.5885000005364418,"msg":"request completed"}
+{"level":30,"time":1774009003242,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-q","req":{"method":"POST","url":"/api/admin/hosts/hst_bae3249c-1/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009003268,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-q","res":{"statusCode":200},"responseTime":25.241800002753735,"msg":"request completed"}
+{"level":30,"time":1774009003271,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-r","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009003271,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009003314,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-r","res":{"statusCode":200},"responseTime":42.885999999940395,"msg":"request completed"}
+{"level":30,"time":1774009005941,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-s","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_bae3249c-1","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009005941,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-s","res":{"statusCode":204},"responseTime":0.48970000445842743,"msg":"request completed"}
+{"level":30,"time":1774009005942,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-t","req":{"method":"DELETE","url":"/api/admin/hosts/hst_bae3249c-1","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009005947,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-t","res":{"statusCode":200},"responseTime":4.28999999910593,"msg":"request completed"}
+{"level":30,"time":1774009005951,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-u","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009005951,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009005991,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-u","res":{"statusCode":200},"responseTime":40.47140000015497,"msg":"request completed"}
+{"level":30,"time":1774009007706,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-v","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_f618ea1b-e","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009007706,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-v","res":{"statusCode":204},"responseTime":0.5430999994277954,"msg":"request completed"}
+{"level":30,"time":1774009007708,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-w","req":{"method":"DELETE","url":"/api/admin/hosts/hst_f618ea1b-e","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009007711,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-w","res":{"statusCode":200},"responseTime":3.104100003838539,"msg":"request completed"}
+{"level":30,"time":1774009007714,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-x","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009007715,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-x","res":{"statusCode":204},"responseTime":0.7071999981999397,"msg":"request completed"}
+{"level":30,"time":1774009007717,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-y","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009007717,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009007754,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-y","res":{"statusCode":200},"responseTime":37.23550000041723,"msg":"request completed"}
+{"level":30,"time":1774009009260,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-z","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_1d996fd2-0","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009009260,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-z","res":{"statusCode":204},"responseTime":0.5540000051259995,"msg":"request completed"}
+{"level":30,"time":1774009009262,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-10","req":{"method":"DELETE","url":"/api/admin/hosts/hst_1d996fd2-0","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009009266,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-10","res":{"statusCode":200},"responseTime":3.987399995326996,"msg":"request completed"}
+{"level":30,"time":1774009009270,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-11","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009009270,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009009327,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-11","res":{"statusCode":200},"responseTime":57.11980000138283,"msg":"request completed"}
+{"level":30,"time":1774009010162,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-12","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_fafd05f1-8","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010163,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-12","res":{"statusCode":204},"responseTime":0.4456000030040741,"msg":"request completed"}
+{"level":30,"time":1774009010164,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-13","req":{"method":"DELETE","url":"/api/admin/hosts/hst_fafd05f1-8","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010167,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-13","res":{"statusCode":200},"responseTime":2.845600001513958,"msg":"request completed"}
+{"level":30,"time":1774009010171,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-14","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010171,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009010222,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-14","res":{"statusCode":200},"responseTime":50.80079999566078,"msg":"request completed"}
+{"level":30,"time":1774009010891,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-15","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_2bf7a428-a","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010892,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-15","res":{"statusCode":204},"responseTime":0.4702000021934509,"msg":"request completed"}
+{"level":30,"time":1774009010893,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-16","req":{"method":"DELETE","url":"/api/admin/hosts/hst_2bf7a428-a","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010903,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-16","res":{"statusCode":200},"responseTime":9.08049999922514,"msg":"request completed"}
+{"level":30,"time":1774009010907,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-17","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009010907,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009010966,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-17","res":{"statusCode":200},"responseTime":59.041999995708466,"msg":"request completed"}
+{"level":30,"time":1774009011625,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-18","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_c32d85b4-e","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009011626,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-18","res":{"statusCode":204},"responseTime":0.5566999986767769,"msg":"request completed"}
+{"level":30,"time":1774009011628,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-19","req":{"method":"DELETE","url":"/api/admin/hosts/hst_c32d85b4-e","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009011631,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-19","res":{"statusCode":200},"responseTime":3.505400002002716,"msg":"request completed"}
+{"level":30,"time":1774009011632,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1a","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009011633,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009011691,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1a","res":{"statusCode":200},"responseTime":58.315000005066395,"msg":"request completed"}
+{"level":30,"time":1774009011694,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1b","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009011694,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009011737,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1b","res":{"statusCode":200},"responseTime":43.32670000195503,"msg":"request completed"}
+{"level":30,"time":1774009012300,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1c","req":{"method":"OPTIONS","url":"/api/admin/hosts/hst_434fac4a-5","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009012300,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1c","res":{"statusCode":204},"responseTime":0.48809999972581863,"msg":"request completed"}
+{"level":30,"time":1774009012302,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1d","req":{"method":"DELETE","url":"/api/admin/hosts/hst_434fac4a-5","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009012311,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1d","res":{"statusCode":200},"responseTime":9.365199998021126,"msg":"request completed"}
+{"level":30,"time":1774009012316,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1e","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009012316,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009012371,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1e","res":{"statusCode":200},"responseTime":54.5004999935627,"msg":"request completed"}
+{"level":30,"time":1774009021586,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1f","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009021586,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1f","res":{"statusCode":204},"responseTime":0.35979999601840973,"msg":"request completed"}
+{"level":30,"time":1774009021588,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1g","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009021588,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009021645,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1g","res":{"statusCode":200},"responseTime":56.92570000141859,"msg":"request completed"}
+{"level":30,"time":1774009031585,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1h","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009031585,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1h","res":{"statusCode":204},"responseTime":0.47860000282526016,"msg":"request completed"}
+{"level":30,"time":1774009031587,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1i","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009031587,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009031620,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1i","res":{"statusCode":200},"responseTime":32.30519999563694,"msg":"request completed"}
+{"level":30,"time":1774009041589,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1j","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009041590,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1j","res":{"statusCode":204},"responseTime":0.6064999997615814,"msg":"request completed"}
+{"level":30,"time":1774009041592,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1k","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009041592,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009041645,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1k","res":{"statusCode":200},"responseTime":52.0738999992609,"msg":"request completed"}
+{"level":30,"time":1774009051617,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1l","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009051618,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1l","res":{"statusCode":204},"responseTime":0.40309999883174896,"msg":"request completed"}
+{"level":30,"time":1774009051619,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1m","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009051619,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009051659,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1m","res":{"statusCode":200},"responseTime":39.77600000053644,"msg":"request completed"}
+{"level":30,"time":1774009061588,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1n","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009061589,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1n","res":{"statusCode":204},"responseTime":0.42320000380277634,"msg":"request completed"}
+{"level":30,"time":1774009061591,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1o","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009061592,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009061649,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1o","res":{"statusCode":200},"responseTime":57.838099993765354,"msg":"request completed"}
+{"level":30,"time":1774009071591,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1p","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009071592,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1p","res":{"statusCode":204},"responseTime":0.45509999990463257,"msg":"request completed"}
+{"level":30,"time":1774009071594,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1q","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009071594,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009071626,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1q","res":{"statusCode":200},"responseTime":32.49990000575781,"msg":"request completed"}
+{"level":30,"time":1774009076174,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1r","req":{"method":"POST","url":"/api/admin/hosts/hst_6d8d52c3-8/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":63863},"msg":"incoming request"}
+{"level":30,"time":1774009076200,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1r","res":{"statusCode":200},"responseTime":25.79280000180006,"msg":"request completed"}
+{"level":30,"time":1774009080197,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1s","req":{"method":"DELETE","url":"/api/admin/hosts/hst_nonexistent/toggle","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":64769},"msg":"incoming request"}
+{"level":30,"time":1774009080198,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1s","msg":"Route DELETE:/api/admin/hosts/hst_nonexistent/toggle not found"}
+{"level":30,"time":1774009080198,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1s","res":{"statusCode":404},"responseTime":1.1191999986767769,"msg":"request completed"}
+{"level":30,"time":1774009081910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1t","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009081910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1t","res":{"statusCode":204},"responseTime":0.5060000047087669,"msg":"request completed"}
+{"level":30,"time":1774009081912,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1u","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009081912,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009081952,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1u","res":{"statusCode":200},"responseTime":40.181500002741814,"msg":"request completed"}
+{"level":30,"time":1774009091908,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1v","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009091909,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1v","res":{"statusCode":204},"responseTime":0.41130000352859497,"msg":"request completed"}
+{"level":30,"time":1774009091911,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1w","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009091911,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009091971,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1w","res":{"statusCode":200},"responseTime":59.985699996352196,"msg":"request completed"}
+{"level":30,"time":1774009101914,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1x","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009101914,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1x","res":{"statusCode":204},"responseTime":0.43609999865293503,"msg":"request completed"}
+{"level":30,"time":1774009101916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1y","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009101916,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009101975,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1y","res":{"statusCode":200},"responseTime":59.00690000504255,"msg":"request completed"}
+{"level":30,"time":1774009111922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1z","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009111924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-1z","res":{"statusCode":204},"responseTime":1.033500000834465,"msg":"request completed"}
+{"level":30,"time":1774009111927,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-20","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009111927,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009111978,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-20","res":{"statusCode":200},"responseTime":51.01190000027418,"msg":"request completed"}
+{"level":30,"time":1774009121915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-21","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009121916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-21","res":{"statusCode":204},"responseTime":1.3676000013947487,"msg":"request completed"}
+{"level":30,"time":1774009121920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-22","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009121920,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009122047,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-22","res":{"statusCode":200},"responseTime":126.18100000172853,"msg":"request completed"}
+{"level":30,"time":1774009131920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-23","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009131921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-23","res":{"statusCode":204},"responseTime":1.1799000054597855,"msg":"request completed"}
+{"level":30,"time":1774009131924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-24","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009131925,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009131976,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-24","res":{"statusCode":200},"responseTime":51.60230000317097,"msg":"request completed"}
+{"level":30,"time":1774009158692,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-25","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009158693,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-25","res":{"statusCode":204},"responseTime":0.7595000043511391,"msg":"request completed"}
+{"level":30,"time":1774009158696,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-26","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009158696,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009158746,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-26","res":{"statusCode":200},"responseTime":50.3382999971509,"msg":"request completed"}
+{"level":30,"time":1774009161586,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-27","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009161586,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009161628,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-27","res":{"statusCode":200},"responseTime":42.40670000016689,"msg":"request completed"}
+{"level":30,"time":1774009171915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-28","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009171916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-28","res":{"statusCode":204},"responseTime":0.970100000500679,"msg":"request completed"}
+{"level":30,"time":1774009171920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-29","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009171920,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009171989,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-29","res":{"statusCode":200},"responseTime":68.60170000046492,"msg":"request completed"}
+{"level":30,"time":1774009178997,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2a","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009178998,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2a","res":{"statusCode":204},"responseTime":0.4129999950528145,"msg":"request completed"}
+{"level":30,"time":1774009178999,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2b","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009179000,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009179062,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2b","res":{"statusCode":200},"responseTime":62.085900001227856,"msg":"request completed"}
+{"level":30,"time":1774009181113,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2c","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009181113,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009181159,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2c","res":{"statusCode":200},"responseTime":46.06400000303984,"msg":"request completed"}
+{"level":30,"time":1774009181608,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2d","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009181608,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009181652,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2d","res":{"statusCode":200},"responseTime":43.376400001347065,"msg":"request completed"}
+{"level":30,"time":1774009181654,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2e","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009181655,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009181691,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2e","res":{"statusCode":200},"responseTime":36.77490000426769,"msg":"request completed"}
+{"level":30,"time":1774009181930,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2f","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009181930,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009181989,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2f","res":{"statusCode":200},"responseTime":58.3475000038743,"msg":"request completed"}
+{"level":30,"time":1774009182246,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2g","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009182246,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009182302,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2g","res":{"statusCode":200},"responseTime":55.82320000231266,"msg":"request completed"}
+{"level":30,"time":1774009191922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2h","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009191924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2h","res":{"statusCode":204},"responseTime":1.1196999996900558,"msg":"request completed"}
+{"level":30,"time":1774009191928,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2i","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009191928,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009191984,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2i","res":{"statusCode":200},"responseTime":56.43819999694824,"msg":"request completed"}
+{"level":30,"time":1774009201910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2j","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009201911,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2j","res":{"statusCode":204},"responseTime":0.5824000015854836,"msg":"request completed"}
+{"level":30,"time":1774009201913,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2k","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009201913,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009201990,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2k","res":{"statusCode":200},"responseTime":76.35379999876022,"msg":"request completed"}
+{"level":30,"time":1774009211921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2l","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009211923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2l","res":{"statusCode":204},"responseTime":1.1555999964475632,"msg":"request completed"}
+{"level":30,"time":1774009211926,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2m","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009211926,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009211980,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2m","res":{"statusCode":200},"responseTime":53.94150000065565,"msg":"request completed"}
+{"level":30,"time":1774009221913,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2n","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009221915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2n","res":{"statusCode":204},"responseTime":1.0844999998807907,"msg":"request completed"}
+{"level":30,"time":1774009221918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2o","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009221919,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009221977,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2o","res":{"statusCode":200},"responseTime":57.97369999438524,"msg":"request completed"}
+{"level":30,"time":1774009231917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2p","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009231918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2p","res":{"statusCode":204},"responseTime":0.8311000019311905,"msg":"request completed"}
+{"level":30,"time":1774009231922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2q","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009231922,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009231975,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2q","res":{"statusCode":200},"responseTime":52.41439999639988,"msg":"request completed"}
+{"level":30,"time":1774009241917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2r","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009241918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2r","res":{"statusCode":204},"responseTime":0.9761999994516373,"msg":"request completed"}
+{"level":30,"time":1774009241921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2s","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009241922,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009242025,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2s","res":{"statusCode":200},"responseTime":103.16119999438524,"msg":"request completed"}
+{"level":30,"time":1774009301919,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2t","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009301920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2t","res":{"statusCode":204},"responseTime":1.2116999998688698,"msg":"request completed"}
+{"level":30,"time":1774009301924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2u","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009301924,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009301977,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2u","res":{"statusCode":200},"responseTime":52.35239999741316,"msg":"request completed"}
+{"level":30,"time":1774009361914,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2v","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009361915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2v","res":{"statusCode":204},"responseTime":0.5394999980926514,"msg":"request completed"}
+{"level":30,"time":1774009361917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2w","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009361917,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009361970,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2w","res":{"statusCode":200},"responseTime":52.97529999911785,"msg":"request completed"}
+{"level":30,"time":1774009421920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2x","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009421921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2x","res":{"statusCode":204},"responseTime":0.5416999980807304,"msg":"request completed"}
+{"level":30,"time":1774009421923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2y","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009421923,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009421992,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2y","res":{"statusCode":200},"responseTime":69.63529999554157,"msg":"request completed"}
+{"level":30,"time":1774009481920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2z","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009481921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-2z","res":{"statusCode":204},"responseTime":1.3087000027298927,"msg":"request completed"}
+{"level":30,"time":1774009481925,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-30","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009481925,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009481989,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-30","res":{"statusCode":200},"responseTime":63.96389999985695,"msg":"request completed"}
+{"level":30,"time":1774009541917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-31","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009541918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-31","res":{"statusCode":204},"responseTime":0.9161000028252602,"msg":"request completed"}
+{"level":30,"time":1774009541922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-32","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009541922,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009541986,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-32","res":{"statusCode":200},"responseTime":63.56259999424219,"msg":"request completed"}
+{"level":30,"time":1774009601921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-33","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009601923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-33","res":{"statusCode":204},"responseTime":1.2382000014185905,"msg":"request completed"}
+{"level":30,"time":1774009601927,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-34","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009601927,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009601985,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-34","res":{"statusCode":200},"responseTime":57.875200003385544,"msg":"request completed"}
+{"level":30,"time":1774009661915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-35","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009661917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-35","res":{"statusCode":204},"responseTime":1.2712000012397766,"msg":"request completed"}
+{"level":30,"time":1774009661921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-36","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009661921,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009661975,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-36","res":{"statusCode":200},"responseTime":54.264399997889996,"msg":"request completed"}
+{"level":30,"time":1774009721909,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-37","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009721911,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-37","res":{"statusCode":204},"responseTime":1.3103999942541122,"msg":"request completed"}
+{"level":30,"time":1774009721915,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-38","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009721915,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009721969,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-38","res":{"statusCode":200},"responseTime":53.80640000104904,"msg":"request completed"}
+{"level":30,"time":1774009781916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-39","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009781916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-39","res":{"statusCode":204},"responseTime":0.5260000079870224,"msg":"request completed"}
+{"level":30,"time":1774009781918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3a","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009781918,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009781968,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3a","res":{"statusCode":200},"responseTime":49.54859998822212,"msg":"request completed"}
+{"level":30,"time":1774009841909,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3b","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009841910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3b","res":{"statusCode":204},"responseTime":0.8719999939203262,"msg":"request completed"}
+{"level":30,"time":1774009841912,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3c","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009841912,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009841972,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3c","res":{"statusCode":200},"responseTime":59.96389999985695,"msg":"request completed"}
+{"level":30,"time":1774009901996,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3d","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009901997,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3d","res":{"statusCode":204},"responseTime":0.9741000086069107,"msg":"request completed"}
+{"level":30,"time":1774009902013,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3e","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009902013,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009902102,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3e","res":{"statusCode":200},"responseTime":88.51620000600815,"msg":"request completed"}
+{"level":30,"time":1774009961911,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3f","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009961911,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3f","res":{"statusCode":204},"responseTime":0.5403999984264374,"msg":"request completed"}
+{"level":30,"time":1774009961913,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3g","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774009961913,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774009961964,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3g","res":{"statusCode":200},"responseTime":51.4379999935627,"msg":"request completed"}
+{"level":30,"time":1774010021920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3h","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010021920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3h","res":{"statusCode":204},"responseTime":0.5312000066041946,"msg":"request completed"}
+{"level":30,"time":1774010021922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3i","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010021922,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010021979,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3i","res":{"statusCode":200},"responseTime":56.17689999938011,"msg":"request completed"}
+{"level":30,"time":1774010081920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3j","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010081921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3j","res":{"statusCode":204},"responseTime":0.7063000053167343,"msg":"request completed"}
+{"level":30,"time":1774010081923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3k","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010081923,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010081984,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3k","res":{"statusCode":200},"responseTime":60.20589999854565,"msg":"request completed"}
+{"level":30,"time":1774010141920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3l","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010141921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3l","res":{"statusCode":204},"responseTime":0.7586999982595444,"msg":"request completed"}
+{"level":30,"time":1774010141923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3m","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010141924,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010141967,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3m","res":{"statusCode":200},"responseTime":43.6148000061512,"msg":"request completed"}
+{"level":30,"time":1774010201916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3n","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010201917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3n","res":{"statusCode":204},"responseTime":0.40619999170303345,"msg":"request completed"}
+{"level":30,"time":1774010201919,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3o","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010201919,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010201966,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3o","res":{"statusCode":200},"responseTime":46.66770000755787,"msg":"request completed"}
+{"level":30,"time":1774010261909,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3p","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010261910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3p","res":{"statusCode":204},"responseTime":0.6490999907255173,"msg":"request completed"}
+{"level":30,"time":1774010261912,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3q","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010261912,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010261960,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3q","res":{"statusCode":200},"responseTime":47.89239999651909,"msg":"request completed"}
+{"level":30,"time":1774010321924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3r","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010321925,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3r","res":{"statusCode":204},"responseTime":1.0540000051259995,"msg":"request completed"}
+{"level":30,"time":1774010321929,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3s","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010321929,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010321980,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3s","res":{"statusCode":200},"responseTime":50.751399993896484,"msg":"request completed"}
+{"level":30,"time":1774010381907,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3t","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010381908,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3t","res":{"statusCode":204},"responseTime":0.529899999499321,"msg":"request completed"}
+{"level":30,"time":1774010381910,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3u","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010381910,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010381955,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3u","res":{"statusCode":200},"responseTime":45.43170000612736,"msg":"request completed"}
+{"level":30,"time":1774010441917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3v","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010441918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3v","res":{"statusCode":204},"responseTime":0.46459999680519104,"msg":"request completed"}
+{"level":30,"time":1774010441919,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3w","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010441920,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010442696,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3w","res":{"statusCode":200},"responseTime":776.3614999949932,"msg":"request completed"}
+{"level":30,"time":1774010501921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3x","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010501922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3x","res":{"statusCode":204},"responseTime":0.8791999965906143,"msg":"request completed"}
+{"level":30,"time":1774010501926,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3y","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010501926,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010502041,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3y","res":{"statusCode":200},"responseTime":115.22100000083447,"msg":"request completed"}
+{"level":30,"time":1774010561914,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3z","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010561916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-3z","res":{"statusCode":204},"responseTime":1.3997000008821487,"msg":"request completed"}
+{"level":30,"time":1774010561920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-40","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010561920,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010562040,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-40","res":{"statusCode":200},"responseTime":120.07330000400543,"msg":"request completed"}
+{"level":30,"time":1774010621938,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-41","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010621942,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-41","res":{"statusCode":204},"responseTime":4.151600003242493,"msg":"request completed"}
+{"level":30,"time":1774010621944,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-42","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010621945,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010622012,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-42","res":{"statusCode":200},"responseTime":67.4970999956131,"msg":"request completed"}
+{"level":30,"time":1774010681922,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-43","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010681925,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-43","res":{"statusCode":204},"responseTime":2.1515000015497208,"msg":"request completed"}
+{"level":30,"time":1774010681929,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-44","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010681929,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010682028,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-44","res":{"statusCode":200},"responseTime":99.30439999699593,"msg":"request completed"}
+{"level":30,"time":1774010741917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-45","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010741918,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-45","res":{"statusCode":204},"responseTime":0.4578999876976013,"msg":"request completed"}
+{"level":30,"time":1774010741920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-46","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010741921,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010741978,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-46","res":{"statusCode":200},"responseTime":57.240699991583824,"msg":"request completed"}
+{"level":30,"time":1774010801916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-47","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010801917,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-47","res":{"statusCode":204},"responseTime":1.1598000079393387,"msg":"request completed"}
+{"level":30,"time":1774010801921,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-48","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010801921,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010801991,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-48","res":{"statusCode":200},"responseTime":70.11380000412464,"msg":"request completed"}
+{"level":30,"time":1774010861913,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-49","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010861914,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-49","res":{"statusCode":204},"responseTime":0.5453999936580658,"msg":"request completed"}
+{"level":30,"time":1774010861916,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4a","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010861916,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010861971,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4a","res":{"statusCode":200},"responseTime":55.29119999706745,"msg":"request completed"}
+{"level":30,"time":1774010921924,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4b","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010921926,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4b","res":{"statusCode":204},"responseTime":1.3129999935626984,"msg":"request completed"}
+{"level":30,"time":1774010921930,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4c","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010921931,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010922000,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4c","res":{"statusCode":200},"responseTime":69.17110000550747,"msg":"request completed"}
+{"level":30,"time":1774010981920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4d","req":{"method":"OPTIONS","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010981920,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4d","res":{"statusCode":204},"responseTime":0.5230000019073486,"msg":"request completed"}
+{"level":30,"time":1774010981923,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4e","req":{"method":"GET","url":"/api/admin/bootstrap","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":53173},"msg":"incoming request"}
+{"level":30,"time":1774010981923,"pid":3452,"hostname":"DESKTOP-50AP17U","msg":"admin bootstrap: start"}
+{"level":30,"time":1774010981984,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4e","res":{"statusCode":200},"responseTime":61.115700006484985,"msg":"request completed"}
+{"level":30,"time":1774011966360,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4f","req":{"method":"POST","url":"/api/hosts/agent/link","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":54412},"msg":"incoming request"}
+{"level":30,"time":1774011966360,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4f","msg":"agent link onRequest"}
+{"level":30,"time":1774011966373,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4f","userId":"e1ba3486-1a1c-4e2e-bbd0-14fd8f6f457b","msg":"authGuard success"}
+{"level":30,"time":1774012030902,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4g","req":{"method":"POST","url":"/api/auth/login","hostname":"localhost:8080","remoteAddress":"127.0.0.1","remotePort":54764},"msg":"incoming request"}
+{"level":30,"time":1774012031162,"pid":3452,"hostname":"DESKTOP-50AP17U","reqId":"req-4g","res":{"statusCode":200},"responseTime":259.7648999989033,"msg":"request completed"}
+^C^C
