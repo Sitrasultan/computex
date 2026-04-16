@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { requestWithFallback } from "../utils/api";
 import { createAppSocket, emitSessionStart } from "../utils/socket";
@@ -15,6 +15,7 @@ const LAUNCH_STATUS_MESSAGES = [
 
 export default function WorkspaceManagerPage() {
   const navigate = useNavigate();
+  const openedLaunchSessionRef = useRef(new Set());
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState([]);
   const [busyWorkspaceId, setBusyWorkspaceId] = useState(null);
@@ -30,6 +31,15 @@ export default function WorkspaceManagerPage() {
     if (!popup) {
       setLaunchSignal("Popup blocked by browser. Allow popups and click Open again.");
     }
+  };
+
+  const openCodeServerForSession = (sessionId, destination) => {
+    if (!destination) return;
+    if (sessionId && openedLaunchSessionRef.current.has(sessionId)) return;
+    if (sessionId) {
+      openedLaunchSessionRef.current.add(sessionId);
+    }
+    openCodeServer(destination);
   };
 
   const fetchWorkspaces = async () => {
@@ -70,7 +80,7 @@ export default function WorkspaceManagerPage() {
           accessUrl: payload.access_url,
           password: payload.password || null,
         });
-        openCodeServer(payload.access_url);
+        openCodeServerForSession(payload.sessionId, payload.access_url);
       }
     });
     socket.connect();
@@ -117,7 +127,7 @@ export default function WorkspaceManagerPage() {
           setPendingSessionId(null);
           setBusyWorkspaceId(null);
           setLaunchResult({ accessUrl: destination, password });
-          openCodeServer(destination);
+          openCodeServerForSession(session.id || pendingSessionId, destination);
           return;
         }
 
@@ -174,7 +184,7 @@ export default function WorkspaceManagerPage() {
         setBusyWorkspaceId(null);
         setLaunchStatus("Code-server is ready.");
         setLaunchResult({ accessUrl: destination, password });
-        openCodeServer(destination);
+        openCodeServerForSession(session?.id || null, destination);
       } else if (session?.id) {
         keepPendingState = true;
         setPendingSessionId(session.id);

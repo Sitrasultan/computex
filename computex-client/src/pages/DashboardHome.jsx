@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import "./dashboard.css";
 import { api, requestWithFallback } from "../utils/api";
@@ -651,6 +651,7 @@ function StartSessionButton() {
 export default function ComputeXDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
+  const openedLaunchSessionRef = useRef(new Set());
 
   const [credits, setCredits] = useState({
   balance: 0,
@@ -677,6 +678,15 @@ const openCodeServer = (destination) => {
   if (!popup) {
     alert("Popup blocked by browser. Allow popups and click Resume again.");
   }
+};
+
+const openCodeServerForSession = (sessionId, destination) => {
+  if (!destination) return;
+  if (sessionId && openedLaunchSessionRef.current.has(sessionId)) return;
+  if (sessionId) {
+    openedLaunchSessionRef.current.add(sessionId);
+  }
+  openCodeServer(destination);
 };
 
 // Fetch active containers
@@ -730,7 +740,7 @@ useEffect(() => {
       accessUrl: payload.access_url,
       password: payload.password || null,
     });
-    openCodeServer(payload.access_url);
+    openCodeServerForSession(payload.sessionId, payload.access_url);
   });
   socket.connect();
   return () => {
@@ -791,7 +801,7 @@ useEffect(() => {
 
     if (destination) {
       setLaunchResult({ accessUrl: destination, password: accessPassword });
-      openCodeServer(destination);
+      openCodeServerForSession(session?.id || null, destination);
     } else if (session?.id) {
       keepPendingState = true;
       setPendingLaunch({ sessionId: session.id, workspaceId });
@@ -838,7 +848,7 @@ useEffect(() => {
         setPendingLaunch(null);
         setBusyWorkspaceId(null);
         setLaunchResult({ accessUrl: destination, password: accessPassword });
-        openCodeServer(destination);
+        openCodeServerForSession(session.id || pendingLaunch.sessionId, destination);
         await fetchDashboard();
         return;
       }

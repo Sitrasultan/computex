@@ -10,6 +10,9 @@ import tkinter as tk
 import uuid
 from datetime import datetime, timezone
 from tkinter import messagebox
+import json
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from docker_manager import DockerManager
 from host_bridge import HostBridge
@@ -46,6 +49,8 @@ class ComputeXHostDashboard(tk.Tk):
         self.host_os = platform.system()
         self.machine = self._collect_machine_profile()
         self.account_token = self._load_account_token()
+        self.allow_auto_restore = os.environ.get("COMPUTEX_HOST_AUTO_RESTORE", "").strip().lower() in ("1", "true", "yes", "on")
+        self.server_device_registered = None
         self.bridge_state = "disconnected"
         self.host_online = True
         self.maintenance_mode = False
@@ -124,11 +129,16 @@ class ComputeXHostDashboard(tk.Tk):
         if not ok:
             self._show_docker_wizard(message, self.docker.last_connect_result.get("requires_manual_start"))
             return
-        if self.account_token:
+        if self.account_token and self.allow_auto_restore:
             self._show_sign_in_wizard(auto_restore=True)
             self._link_account(token=self.account_token, auto=True, on_success=self._show_dashboard, on_failure=self._restore_failed)
             return
-        self._show_sign_in_wizard()
+        server_registered = self._check_server_device_registered()
+        known_host = self._has_registered_before() if server_registered is None else bool(server_registered or self._has_registered_before())
+        self._show_sign_in_wizard(known_host_override=known_host)
+        if self.account_token and not self.allow_auto_restore:
+            self.account_status_var.set("Sign in required")
+            self.account_detail_var.set("Saved host session detected. Enter your email and password to continue.")
 
     def _restore_failed(self):
         self.account_token = None
@@ -140,9 +150,15 @@ class ComputeXHostDashboard(tk.Tk):
         panel = tk.Frame(self.root_container, bg=self.colors["panel"], highlightbackground=self.colors["stroke"], highlightthickness=1)
         panel.grid(row=0, column=0, sticky="nsew", padx=50, pady=50)
         tk.Label(panel, text="ComputeX Host Agent", bg=self.colors["panel"], fg=self.colors["text"], font=("Segoe UI Semibold", 28)).pack(anchor="w", padx=34, pady=(34, 8))
-        tk.Label(panel, text="We verify Docker first, then sign into the ComputeX host account that will register this machine. The full dashboard only appears after that flow is complete.", bg=self.colors["panel"], fg=self.colors["muted"], justify="left", wraplength=920, font=("Segoe UI", 12)).pack(anchor="w", padx=34)
-        for item in ["1. Prepare Docker isolation", "2. Sign in and register the host", "3. Start heartbeat, task listener, and live controls"]:
-            tk.Label(panel, text=item, bg=self.colors["panel"], fg=self.colors["accent2"], font=("Segoe UI Semibold", 11)).pack(anchor="w", padx=34, pady=(18 if item.startswith("1.") else 6, 0))
+        tk.Label(
+            panel,
+            text="Please make sure Docker Engine is running. The Host Agent handles the rest automatically. Once Docker has started, you can minimize or close the Docker window.",
+            bg=self.colors["panel"],
+            fg=self.colors["muted"],
+            justify="left",
+            wraplength=920,
+            font=("Segoe UI", 12),
+        ).pack(anchor="w", padx=34)
 
     def _wizard_shell(self, step_title, subtitle, step_no):
         self._clear_root()
@@ -181,10 +197,16 @@ class ComputeXHostDashboard(tk.Tk):
         if prompt_manual:
             self.after(120, lambda: messagebox.showinfo("Start Docker Desktop", "Please open Docker Desktop manually and leave it running, then return here and click Retry Docker."))
 
-    def _show_sign_in_wizard(self, auto_restore=False):
+    def _show_sign_in_wizard(self, auto_restore=False, known_host_override=None):
         self.host_bridge.stop()
-        _, right = self._wizard_shell("Step 2: Sign In To Register This Host", "Host registration is tied to the user's ComputeX host account, so the dashboard stays locked until sign-in succeeds.", 2)
-        known_host = self._has_registered_before()
+        known_host = self._has_registered_before() if known_host_override is None else bool(known_host_override)
+        step_title = "Step 2: Sign In To Continue" if known_host else "Step 2: Sign In To Register This Host"
+        step_subtitle = (
+            "This device is already registered. Sign in to continue to the host dashboard."
+            if known_host
+            else "First-time setup: sign in with your ComputeX host account to register this machine."
+        )
+        _, right = self._wizard_shell(step_title, step_subtitle, 2)
         if not auto_restore:
             self.account_status_var.set("Sign in")
             self.account_detail_var.set(
@@ -203,7 +225,7 @@ class ComputeXHostDashboard(tk.Tk):
         tk.Label(body, textvariable=self.account_detail_var, bg=self.colors["card"], fg=self.colors["muted"], wraplength=520, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(0, 14))
         row = tk.Frame(body, bg=self.colors["card"])
         row.pack(anchor="w")
-        self.signin_button = self._button(row, "Sign In And Register Host", self._manual_sign_in, self.colors["accent"], "#052019")
+        self.signin_button = self._button(row, "Sign In" if known_host else "Sign In And Register Host", self._manual_sign_in, self.colors["accent"], "#052019")
         self.signin_button.pack(side="left", padx=(0, 10))
         self._button(row, "Back To Docker", lambda: self._show_docker_wizard("Return to Docker setup if the engine is not ready yet."), self.colors["accent2"], "#051628").pack(side="left")
         if auto_restore:
@@ -213,7 +235,7 @@ class ComputeXHostDashboard(tk.Tk):
         self._wizard_info(right)
 
     def _wizard_info(self, parent):
-        profile_card, profile = self._card(parent, "Host profile that will be registered")
+        profile_card, profile = self._card(parent, "Host profile for this machine")
         profile_card.pack(fill="x", pady=(0, 14))
         rows = [("Hostname", self.machine["hostname"]), ("OS", self.machine["os"]), ("CPU", self.machine["cpu"]), ("Memory", f'{self.machine["ram_gb"]} GB'), ("Disk free", f'{self.machine["disk_free_gb"]} GB / {self.machine["disk_total_gb"]} GB')]
         for key, value in rows:
@@ -223,7 +245,7 @@ class ComputeXHostDashboard(tk.Tk):
             tk.Label(row, text=value, bg=self.colors["card"], fg=self.colors["text"], font=("Segoe UI Semibold", 10)).pack(side="right")
         promise_card, promise = self._card(parent, "What the host agent handles")
         promise_card.pack(fill="x")
-        for item in ["Registers the machine to the signed-in ComputeX host account.", "Sends heartbeat updates with CPU, RAM, disk, sessions, and status.", "Listens for task commands and starts or cleans up Docker-based sessions."]:
+        for item in ["Links this machine to the signed-in ComputeX host account on first sign-in.", "Sends heartbeat updates with CPU, RAM, disk, sessions, and status.", "Listens for task commands and starts or cleans up Docker-based sessions."]:
             tk.Label(promise, text=item, bg=self.colors["card"], fg=self.colors["text"], wraplength=520, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=4)
 
     def _manual_sign_in(self):
@@ -240,7 +262,9 @@ class ComputeXHostDashboard(tk.Tk):
     def _after_retry(self, ok, msg):
         if ok:
             self._log_activity("Docker engine connected")
-            self._show_sign_in_wizard()
+            server_registered = self._check_server_device_registered()
+            known_host = self._has_registered_before() if server_registered is None else bool(server_registered or self._has_registered_before())
+            self._show_sign_in_wizard(known_host_override=known_host)
             return
         self.setup_status.config(text=msg)
         if self.docker.last_connect_result.get("requires_manual_start"):
@@ -435,6 +459,7 @@ class ComputeXHostDashboard(tk.Tk):
                         raise RuntimeError(response.text[:180])
                 self.account_token = auth_token
                 self._save_account_token(auth_token)
+                self.server_device_registered = True
                 state = self.docker.get_state()
                 state["host_registered_once"] = True
                 state["linked_account_email"] = self.account_email_var.get().strip() or state.get("linked_account_email")
@@ -463,7 +488,28 @@ class ComputeXHostDashboard(tk.Tk):
 
     def _has_registered_before(self):
         state = self.docker.get_state()
-        return bool(state.get("host_registered_once") or state.get("linked_account_email") or self.account_token)
+        return bool(state.get("host_registered_once") or state.get("linked_account_email") or self.account_token or self.server_device_registered)
+
+    def _check_server_device_registered(self, timeout=3):
+        try:
+            query = urlencode({"deviceId": self.device_id})
+            url = f"{self.server_url.rstrip('/')}/api/hosts/agent/device-status?{query}"
+            req = Request(
+                url,
+                headers={"Authorization": f"Bearer {self.host_secret}"},
+                method="GET",
+            )
+            with urlopen(req, timeout=timeout) as resp:
+                payload = json.loads(resp.read().decode("utf-8") or "{}")
+            registered = bool(payload.get("registered"))
+            self.server_device_registered = registered
+            if registered:
+                state = self.docker.get_state()
+                state["host_registered_once"] = True
+                self.docker.state_store.save(state)
+            return registered
+        except Exception:
+            return None
 
     def _collect_machine_profile(self):
         disk_total, disk_free = self._disk_usage()

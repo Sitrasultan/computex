@@ -39,6 +39,8 @@ const NO_PAIRED_HOST_MESSAGE =
   "No paired online host is available for this account. Make sure the host app is signed in with the same user account.";
 const NO_AVAILABLE_HOST_MESSAGE =
   "No online host is currently available. Keep at least one host app connected.";
+const NO_HEALTHY_HOST_MESSAGE =
+  "All available hosts are currently above safe load limits. Please retry in a moment.";
 const WORKSPACE_TOOL_LIMIT = 5;
 const WORKSPACE_TOOL_CATALOG = [
   { id: "python", label: "Python", logo: "PY" },
@@ -442,6 +444,11 @@ async function seedSystemSettings() {
     ["allow_new_sessions", "true"],
     ["max_session_minutes", "120"],
     ["live_poll_seconds", "10"],
+    ["enforce_host_overuse_protection", "true"],
+    ["host_max_cpu_percent", "90"],
+    ["host_max_ram_percent", "90"],
+    ["host_max_disk_percent", "95"],
+    ["host_telemetry_stale_seconds", "30"],
   ];
 
   for (const [key, value] of defaults) {
@@ -499,6 +506,19 @@ function parseBooleanSetting(value, fallback = false) {
   return fallback;
 }
 
+function parseNumberSetting(value, fallback, min = null, max = null) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  let next = parsed;
+  if (min !== null) {
+    next = Math.max(min, next);
+  }
+  if (max !== null) {
+    next = Math.min(max, next);
+  }
+  return next;
+}
+
 function safeJsonParse(value, fallback = null) {
   if (!value) return fallback;
   try {
@@ -530,6 +550,38 @@ function hostAvailabilityFromState(device, telemetry) {
   return normalizeHostAvailability(telemetry?.status || device?.live_status);
 }
 
+function evaluateHostOveruseState(host, telemetry, settings) {
+  if (!settings?.enforce_host_overuse_protection) {
+    return { blocked: false, reason: null };
+  }
+
+  if (!telemetry) {
+    return { blocked: true, reason: "missing_telemetry" };
+  }
+
+  const telemetryCreatedAt = new Date(telemetry.created_at || 0).getTime();
+  const telemetryAgeMs = Number.isFinite(telemetryCreatedAt) ? Date.now() - telemetryCreatedAt : Number.POSITIVE_INFINITY;
+  if (telemetryAgeMs > settings.host_telemetry_stale_seconds * 1000) {
+    return { blocked: true, reason: "stale_telemetry", telemetryAgeMs };
+  }
+
+  const cpu = Number(telemetry.cpu ?? 0);
+  const ram = Number(telemetry.ram ?? 0);
+  const disk = Number(telemetry.disk ?? 0);
+
+  if (Number.isFinite(cpu) && cpu >= settings.host_max_cpu_percent) {
+    return { blocked: true, reason: "cpu", metric: "cpu", value: cpu, threshold: settings.host_max_cpu_percent };
+  }
+  if (Number.isFinite(ram) && ram >= settings.host_max_ram_percent) {
+    return { blocked: true, reason: "ram", metric: "ram", value: ram, threshold: settings.host_max_ram_percent };
+  }
+  if (Number.isFinite(disk) && disk >= settings.host_max_disk_percent) {
+    return { blocked: true, reason: "disk", metric: "disk", value: disk, threshold: settings.host_max_disk_percent };
+  }
+
+  return { blocked: false, reason: null };
+}
+
 function formatDurationMinutes(startedAt, endedAt = null) {
   if (!startedAt) return 0;
   const start = new Date(startedAt).getTime();
@@ -559,8 +611,13 @@ async function getSystemSettings() {
   const map = Object.fromEntries(rows.map((row) => [row.key, row.value]));
   return {
     allow_new_sessions: parseBooleanSetting(map.allow_new_sessions, true),
-    max_session_minutes: Number(map.max_session_minutes || 120),
-    live_poll_seconds: Number(map.live_poll_seconds || 10),
+    max_session_minutes: parseNumberSetting(map.max_session_minutes, 120, 15, null),
+    live_poll_seconds: parseNumberSetting(map.live_poll_seconds, 10, 5, null),
+    enforce_host_overuse_protection: parseBooleanSetting(map.enforce_host_overuse_protection, true),
+    host_max_cpu_percent: parseNumberSetting(map.host_max_cpu_percent, 90, 1, 100),
+    host_max_ram_percent: parseNumberSetting(map.host_max_ram_percent, 90, 1, 100),
+    host_max_disk_percent: parseNumberSetting(map.host_max_disk_percent, 95, 1, 100),
+    host_telemetry_stale_seconds: parseNumberSetting(map.host_telemetry_stale_seconds, 30, 5, 600),
   };
 }
 
@@ -570,6 +627,8 @@ function getEnvironmentCatalog() {
 
 async function findLaunchHostForUser(userId, requestedHostId = null, options = {}) {
   const includeGlobalPool = Boolean(options.includeGlobalPool);
+  const ignoreOveruseProtection = Boolean(options.ignoreOveruseProtection);
+  const settings = options.settings || (await getSystemSettings());
   const params = [];
   let sql = `
     SELECT
@@ -599,7 +658,7 @@ async function findLaunchHostForUser(userId, requestedHostId = null, options = {
 
   const hosts = await all(sql, params);
   if (!hosts.length) {
-    return null;
+    return { host: null, reason: null };
   }
 
   const orderedHosts =
@@ -610,12 +669,40 @@ async function findLaunchHostForUser(userId, requestedHostId = null, options = {
         ]
       : hosts;
 
+  const telemetryDeviceIds = [...new Set(orderedHosts.map((host) => host.device_id).filter(Boolean))];
+  const latestTelemetryMap = telemetryDeviceIds.length ? await getLatestTelemetryMap(telemetryDeviceIds) : {};
+
   let fallbackHost = null;
+  let blockedByOveruse = false;
   for (const host of orderedHosts) {
     if (!host.device_id) continue;
     const adminState = await get("SELECT enabled FROM host_admin_state WHERE host_id = ?", [host.id]);
     if (adminState && !adminState.enabled) continue;
-    if (hostSockets.has(host.device_id) && normalizeHostAvailability(host.live_status) !== "maintenance") return host;
+
+    const telemetry = latestTelemetryMap[host.device_id] || null;
+    const overuseState = ignoreOveruseProtection
+      ? { blocked: false, reason: null }
+      : evaluateHostOveruseState(host, telemetry, settings);
+    if (overuseState.blocked) {
+      blockedByOveruse = true;
+      fastify.log.warn(
+        {
+          hostId: host.id,
+          deviceId: host.device_id,
+          reason: overuseState.reason,
+          metric: overuseState.metric || null,
+          value: overuseState.value ?? null,
+          threshold: overuseState.threshold ?? null,
+          telemetryAgeMs: overuseState.telemetryAgeMs ?? null,
+        },
+        "host.overuse.blocked"
+      );
+      continue;
+    }
+
+    if (hostSockets.has(host.device_id) && normalizeHostAvailability(host.live_status) !== "maintenance") {
+      return { host, reason: null };
+    }
     const availability = hostAvailabilityFromState(
       { last_seen_at: host.last_seen_at, live_status: host.live_status },
       { status: host.live_status }
@@ -624,7 +711,13 @@ async function findLaunchHostForUser(userId, requestedHostId = null, options = {
     if (!fallbackHost) fallbackHost = host;
   }
 
-  return fallbackHost;
+  if (fallbackHost) {
+    return { host: fallbackHost, reason: null };
+  }
+  if (blockedByOveruse) {
+    return { host: null, reason: "overloaded" };
+  }
+  return { host: null, reason: null };
 }
 
 async function emitHostCommand(deviceId, command, payload = {}, timeoutMs = 20000) {
@@ -984,10 +1077,15 @@ async function prepareSessionLaunchForUser(userId, launchBody = {}, seed = {}) {
     throw createStatusError(403, "Your account is blocked from starting sessions");
   }
 
-  const selectedHost = await findLaunchHostForUser(userId, hostId, {
+  const hostSelection = await findLaunchHostForUser(userId, hostId, {
     includeGlobalPool: GLOBAL_HOST_POOL_ENABLED,
+    settings,
   });
+  const selectedHost = hostSelection?.host || null;
   if (!selectedHost) {
+    if (hostSelection?.reason === "overloaded") {
+      throw createStatusError(429, NO_HEALTHY_HOST_MESSAGE);
+    }
     throw createStatusError(
       409,
       GLOBAL_HOST_POOL_ENABLED ? NO_AVAILABLE_HOST_MESSAGE : NO_PAIRED_HOST_MESSAGE
@@ -1243,10 +1341,16 @@ async function createSessionLaunchForUser(userId, launchBody = {}) {
 async function createAsyncSessionLaunchForUser(userId, launchBody = {}) {
   const environment = launchBody?.environment || "coding";
   const requestedHostId = launchBody?.host_id || launchBody?.hostId || null;
-  const preflightHost = await findLaunchHostForUser(userId, requestedHostId, {
+  const settings = await getSystemSettings();
+  const preflightSelection = await findLaunchHostForUser(userId, requestedHostId, {
     includeGlobalPool: GLOBAL_HOST_POOL_ENABLED,
+    settings,
   });
+  const preflightHost = preflightSelection?.host || null;
   if (!preflightHost) {
+    if (preflightSelection?.reason === "overloaded") {
+      throw createStatusError(429, NO_HEALTHY_HOST_MESSAGE);
+    }
     throw createStatusError(
       409,
       GLOBAL_HOST_POOL_ENABLED ? NO_AVAILABLE_HOST_MESSAGE : NO_PAIRED_HOST_MESSAGE
@@ -2096,6 +2200,38 @@ fastify.get("/api/hosts/agent/link/status", { preHandler: authGuard }, async (re
   });
 });
 
+fastify.get("/api/hosts/agent/device-status", async (request, reply) => {
+  const authHeader = request.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return reply.code(401).send({ message: "Unauthorized" });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  if (token !== HOST_AGENT_SECRET) {
+    return reply.code(403).send({ message: "Invalid host secret" });
+  }
+
+  const deviceId = request.query?.deviceId || null;
+  if (!deviceId) {
+    return reply.code(400).send({ message: "Device id is required" });
+  }
+
+  const host = await get(
+    "SELECT id, user_id, device_id, status, created_at FROM hosts WHERE device_id = ? ORDER BY created_at DESC LIMIT 1",
+    [deviceId]
+  );
+  const device = await get(
+    "SELECT id, label, os, created_at, last_seen_at, live_status FROM host_devices WHERE id = ?",
+    [deviceId]
+  );
+
+  return reply.send({
+    device_id: deviceId,
+    registered: Boolean(host),
+    host: host || null,
+    device: device || null,
+  });
+});
+
 fastify.post("/api/hosts/agent/link", { preHandler: authGuard }, async (request, reply) => {
   fastify.log.info({ reqId: request.id }, "agent link start");
   const startedAt = Date.now();
@@ -2598,7 +2734,11 @@ fastify.delete("/api/workspaces/:id", { preHandler: authGuard }, async (request,
     await run("UPDATE sessions SET status = ?, ended_at = ? WHERE id = ?", ["stopped", new Date().toISOString(), session.id]);
   }
 
-  const launchHost = await findLaunchHostForUser(userId, request.body?.hostId || null);
+  const launchSelection = await findLaunchHostForUser(userId, request.body?.hostId || null, {
+    includeGlobalPool: GLOBAL_HOST_POOL_ENABLED,
+    ignoreOveruseProtection: true,
+  });
+  const launchHost = launchSelection?.host || null;
   if (launchHost?.device_id && hostSockets.has(launchHost.device_id)) {
     try {
       await emitHostCommand(launchHost.device_id, "delete_workspace_data", { workspacePath: workspace.path });
@@ -2910,10 +3050,56 @@ fastify.get("/api/admin/settings", async (_request, reply) => {
 });
 
 fastify.post("/api/admin/settings", async (request, reply) => {
+  const current = await getSystemSettings();
+  const body = request.body || {};
   const settings = await updateSystemSettings({
-    allow_new_sessions: request.body?.allow_new_sessions !== false,
-    max_session_minutes: Math.max(15, Number(request.body?.max_session_minutes || 120)),
-    live_poll_seconds: Math.max(5, Number(request.body?.live_poll_seconds || 10)),
+    allow_new_sessions:
+      body.allow_new_sessions === undefined
+        ? current.allow_new_sessions
+        : parseBooleanSetting(body.allow_new_sessions, current.allow_new_sessions),
+    max_session_minutes: parseNumberSetting(
+      body.max_session_minutes ?? current.max_session_minutes,
+      120,
+      15,
+      null
+    ),
+    live_poll_seconds: parseNumberSetting(
+      body.live_poll_seconds ?? current.live_poll_seconds,
+      10,
+      5,
+      null
+    ),
+    enforce_host_overuse_protection:
+      body.enforce_host_overuse_protection === undefined
+        ? current.enforce_host_overuse_protection
+        : parseBooleanSetting(
+            body.enforce_host_overuse_protection,
+            current.enforce_host_overuse_protection
+          ),
+    host_max_cpu_percent: parseNumberSetting(
+      body.host_max_cpu_percent ?? current.host_max_cpu_percent,
+      90,
+      1,
+      100
+    ),
+    host_max_ram_percent: parseNumberSetting(
+      body.host_max_ram_percent ?? current.host_max_ram_percent,
+      90,
+      1,
+      100
+    ),
+    host_max_disk_percent: parseNumberSetting(
+      body.host_max_disk_percent ?? current.host_max_disk_percent,
+      95,
+      1,
+      100
+    ),
+    host_telemetry_stale_seconds: parseNumberSetting(
+      body.host_telemetry_stale_seconds ?? current.host_telemetry_stale_seconds,
+      30,
+      5,
+      600
+    ),
   });
 
   await insertAuditLog({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { requestWithFallback } from "../utils/api";
@@ -98,9 +98,11 @@ function EnvironmentCard({ environment, onLaunch, loading }) {
 
 export default function SessionLaunchPage() {
   const navigate = useNavigate();
+  const openedLaunchSessionRef = useRef(new Set());
   const [loading, setLoading] = useState(false);
   const [environments, setEnvironments] = useState(FALLBACK_ENVIRONMENTS);
   const [lastLaunch, setLastLaunch] = useState(null);
+  const [pendingLaunchSessionId, setPendingLaunchSessionId] = useState(null);
 
   const openCodeServer = (destination) => {
     if (!destination) return;
@@ -108,6 +110,15 @@ export default function SessionLaunchPage() {
     if (!popup) {
       alert("Popup blocked by browser. Allow popups and launch again.");
     }
+  };
+
+  const openCodeServerForSession = (sessionId, destination) => {
+    if (!destination) return;
+    if (sessionId && openedLaunchSessionRef.current.has(sessionId)) return;
+    if (sessionId) {
+      openedLaunchSessionRef.current.add(sessionId);
+    }
+    openCodeServer(destination);
   };
 
   useEffect(() => {
@@ -144,18 +155,20 @@ export default function SessionLaunchPage() {
     const socket = createAppSocket(token);
     socket.on("client:launch-progress", (payload) => {
       if (!payload?.sessionId || !payload?.access_url) return;
+      if (pendingLaunchSessionId !== payload.sessionId) return;
+      setPendingLaunchSessionId(null);
       setLastLaunch({
         title: "Coding Workspace",
         accessUrl: payload.access_url,
         password: payload.password || null,
       });
-      openCodeServer(payload.access_url);
+      openCodeServerForSession(payload.sessionId, payload.access_url);
     });
     socket.connect();
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [pendingLaunchSessionId]);
 
   const startEnvironment = async (environment) => {
     if (loading || environment.status !== "available") return;
@@ -175,6 +188,7 @@ export default function SessionLaunchPage() {
       const res = await emitSessionStart(payload, SESSION_LAUNCH_TIMEOUT_MS);
       const session = res?.session;
       const launch = res?.launch || {};
+      setPendingLaunchSessionId(session?.id || null);
 
       setLastLaunch({
         title: environment.title,
@@ -184,9 +198,11 @@ export default function SessionLaunchPage() {
 
       const destination = launch.access_url || session?.access_url;
       if (destination) {
-        openCodeServer(destination);
+        setPendingLaunchSessionId(null);
+        openCodeServerForSession(session?.id || null, destination);
       }
     } catch (error) {
+      setPendingLaunchSessionId(null);
       alert(error?.message || "Failed to start session");
     } finally {
       setLoading(false);
