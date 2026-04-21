@@ -27,6 +27,12 @@ const DASHBOARD_FAST_MODE = true;
 const SERVER_STARTED_AT = Date.now();
 const HOST_ONLINE_WINDOW_MS = 2 * 60 * 1000;
 const DEFAULT_CODE_SERVER_IMAGE = process.env.COMPUTEX_CODE_IMAGE || "computex-code";
+const DEFAULT_PYTHON_INTERPRETER_IMAGE =
+  process.env.COMPUTEX_IMAGE_PYTHON_INTERPRETER || process.env.COMPUTEX_IMAGE_PYTHON || "computex-python-interpreter";
+const IMAGE_ALIAS_MAP = new Map([
+  [DEFAULT_CODE_SERVER_IMAGE, DEFAULT_PYTHON_INTERPRETER_IMAGE],
+  ["computex-python", DEFAULT_PYTHON_INTERPRETER_IMAGE],
+]);
 const DEFAULT_SESSION_ROOT = process.env.COMPUTEX_SESSION_ROOT || "C:/computex/projects";
 const DEFAULT_WORKSPACE_ROOT = process.env.COMPUTEX_WORKSPACE_ROOT || "C:/computex/workspaces";
 const CODING_SESSION_HOST_TIMEOUT_MS = process.env.COMPUTEX_CODING_HOST_TIMEOUT_MS
@@ -60,12 +66,18 @@ const WORKSPACE_TOOL_CATALOG = [
   { id: "k8s", label: "Kubernetes", logo: "K8" },
 ];
 
+function normalizeCodingImageKey(imageKey) {
+  const raw = String(imageKey || "").trim();
+  if (!raw) return raw;
+  return IMAGE_ALIAS_MAP.get(raw) || raw;
+}
+
 const WORKSPACE_PRESETS = [
   {
     key: "python",
     name: "Python Workspace",
     tools: ["python", "git"],
-    image_key: process.env.COMPUTEX_IMAGE_PYTHON || "computex-python",
+    image_key: DEFAULT_PYTHON_INTERPRETER_IMAGE,
   },
   {
     key: "node",
@@ -142,7 +154,7 @@ const ENVIRONMENT_CATALOG = {
     id: "coding",
     title: "Coding Workspace",
     status: "available",
-    image: DEFAULT_CODE_SERVER_IMAGE,
+    image: DEFAULT_PYTHON_INTERPRETER_IMAGE,
     category: "Development",
     description: "VS Code in the browser with Python, Node.js, Git, and a persistent project folder.",
   },
@@ -437,6 +449,21 @@ async function migrateDb() {
 }
 
 await migrateDb();
+
+async function migrateLegacyCodingImageDefaults() {
+  // Keep older records from pinning new launches to the legacy non-Python base image.
+  await run(
+    "UPDATE workspaces SET image_key = ? WHERE type = 'coding' AND (image_key IS NULL OR TRIM(image_key) = '' OR image_key = ?)",
+    [DEFAULT_PYTHON_INTERPRETER_IMAGE, DEFAULT_CODE_SERVER_IMAGE]
+  );
+
+  await run(
+    "UPDATE sessions SET image = ? WHERE environment_type = 'coding' AND status = 'starting' AND (image IS NULL OR TRIM(image) = '' OR image = ?)",
+    [DEFAULT_PYTHON_INTERPRETER_IMAGE, DEFAULT_CODE_SERVER_IMAGE]
+  );
+}
+
+await migrateLegacyCodingImageDefaults();
 
 async function seedSystemSettings() {
   const now = new Date().toISOString();
@@ -821,7 +848,7 @@ function inferImageForTools(selectedTools = []) {
   if (tools.has("jupyter")) return process.env.COMPUTEX_IMAGE_DATA || "computex-data";
   if (tools.has("python") && tools.has("node")) return process.env.COMPUTEX_IMAGE_FULLSTACK || "computex-fullstack";
   if (tools.has("node")) return process.env.COMPUTEX_IMAGE_NODE || "computex-node";
-  if (tools.has("python")) return process.env.COMPUTEX_IMAGE_PYTHON || "computex-python";
+  if (tools.has("python")) return DEFAULT_PYTHON_INTERPRETER_IMAGE;
   return DEFAULT_CODE_SERVER_IMAGE;
 }
 
@@ -855,7 +882,7 @@ function normalizeWorkspaceRow(row) {
 
   return {
     ...row,
-    image_key: row.image_key || DEFAULT_CODE_SERVER_IMAGE,
+    image_key: row.image_key || DEFAULT_PYTHON_INTERPRETER_IMAGE,
     preset_key: row.preset_key || null,
     selected_tools: parsedTools,
   };
@@ -1134,14 +1161,26 @@ async function prepareSessionLaunchForUser(userId, launchBody = {}, seed = {}) {
     launchBody,
     resolvedPresetFallback
   );
-  const runtimeImage =
+  const explicitImageOverrideRaw =
     launchBody.image ||
     launchBody.image_key ||
     launchBody.imageKey ||
-    workspace?.image_key ||
-    launchProfile.image_key ||
-    environmentConfig.image ||
-    DEFAULT_CODE_SERVER_IMAGE;
+    null;
+  const explicitImageOverride =
+    explicitImageOverrideRaw && explicitImageOverrideRaw !== DEFAULT_CODE_SERVER_IMAGE
+      ? explicitImageOverrideRaw
+      : null;
+  const workspaceImage =
+    workspace?.image_key && workspace.image_key !== DEFAULT_CODE_SERVER_IMAGE
+      ? workspace.image_key
+      : null;
+  const runtimeImage = normalizeCodingImageKey(
+    explicitImageOverride ||
+      workspaceImage ||
+      launchProfile.image_key ||
+      environmentConfig.image ||
+      DEFAULT_CODE_SERVER_IMAGE
+  );
   const generatedPassword = `sess_${sessionId.slice(-6)}`;
   let launchResult = { ok: true };
   fastify.log.info(
@@ -1231,6 +1270,7 @@ async function finalizePreparedSessionLaunch(prepared, { persistExisting = false
         CODING_SESSION_HOST_TIMEOUT_MS
       );
       baseSession.container_name = launchResult.container_name || baseSession.container_name;
+      baseSession.image = launchResult.image || baseSession.image;
       baseSession.access_url = launchResult.access_url || null;
       baseSession.access_password = launchResult.password || generatedPassword;
       if (!skipWorkspace) {
@@ -1372,6 +1412,7 @@ async function createAsyncSessionLaunchForUser(userId, launchBody = {}) {
   const pendingTitle = skipWorkspace
     ? "Code Server Session"
     : (launchBody.workspace_name || launchBody.workspaceName || environmentConfig?.title || "Coding Workspace");
+  const requestedImage = launchBody.image || launchBody.image_key || launchBody.imageKey || null;
   const pendingSession = {
     id: sessionId,
     title: pendingTitle,
@@ -1381,7 +1422,7 @@ async function createAsyncSessionLaunchForUser(userId, launchBody = {}) {
     host_id: null,
     user_id: userId,
     environment_type: environment,
-    image: launchBody.image || null,
+    image: normalizeCodingImageKey(requestedImage),
     container_name: `computex_session_${sessionId}`,
     access_url: null,
     access_password: null,
@@ -3286,14 +3327,6 @@ fastify.log.info(`ComputeX backend build ${new Date().toISOString()} | agent-lin
 fastify.log.info("Agent link logging enabled");
 await fastify.listen({ port: PORT, host: "0.0.0.0" });
 fastify.log.info(`ComputeX backend listening on ${PORT}`);
-
-
-
-
-
-
-
-
 
 
 

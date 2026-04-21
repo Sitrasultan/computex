@@ -7,59 +7,18 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from urllib.parse import urlparse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-DEFAULT_CODE_SERVER_BUILD_CONTEXT = Path(
-    os.environ.get(
-        "COMPUTEX_CODE_BUILD_CONTEXT",
-        str(Path(__file__).resolve().parent / "docker" / "code-server"),
-    )
+from code_server_image_manager import (
+    get_coding_image_catalog,
+    is_python_ready_image,
+    resolve_build_context_for_image as resolve_managed_build_context,
 )
-
-DEFAULT_DOCKER_ROOT = Path(__file__).resolve().parent / "docker"
-DEFAULT_PRESET_BUILD_CONTEXTS = {
-    "computex-code": DEFAULT_DOCKER_ROOT / "code-server",
-    "computex-python": DEFAULT_DOCKER_ROOT / "presets" / "python",
-    "computex-node": DEFAULT_DOCKER_ROOT / "presets" / "node",
-    "computex-flutter": DEFAULT_DOCKER_ROOT / "presets" / "flutter",
-    "computex-fullstack": DEFAULT_DOCKER_ROOT / "presets" / "fullstack",
-    "computex-data": DEFAULT_DOCKER_ROOT / "presets" / "data",
-    "computex-go": DEFAULT_DOCKER_ROOT / "presets" / "go",
-    "computex-rust": DEFAULT_DOCKER_ROOT / "presets" / "rust",
-    "computex-java": DEFAULT_DOCKER_ROOT / "presets" / "java",
-    "computex-cpp": DEFAULT_DOCKER_ROOT / "presets" / "cpp",
-    "computex-php": DEFAULT_DOCKER_ROOT / "presets" / "php",
-    "computex-dotnet": DEFAULT_DOCKER_ROOT / "presets" / "dotnet",
-    "computex-devops": DEFAULT_DOCKER_ROOT / "presets" / "devops",
-}
-
-PYTHON_READY_IMAGES = {
-    "computex-python",
-    "computex-data",
-    "computex-fullstack",
-    "computex-devops",
-}
-
-
-def _parse_coding_image_catalog() -> List[str]:
-    # Keep warmup focused on the common launch path; larger presets build on demand.
-    default_images = ["computex-code", "computex-python"]
-    if os.environ.get("COMPUTEX_PREBUILD_ALL_IMAGES", "").lower() in ("1", "true", "yes", "on"):
-        default_images = list(DEFAULT_PRESET_BUILD_CONTEXTS.keys())
-    configured = os.environ.get("COMPUTEX_CODING_IMAGE_CATALOG", "")
-    if not configured.strip():
-        return default_images
-
-    requested = [item.strip() for item in configured.split(",") if item.strip()]
-    deduped = []
-    for image in requested:
-        if image not in deduped:
-            deduped.append(image)
-    return deduped or default_images
 
 
 
@@ -108,13 +67,11 @@ class DockerManager:
             "requires_manual_start": False,
             "auto_start_attempted": False,
         }
-        self.coding_image_catalog = _parse_coding_image_catalog()
+        self.coding_image_catalog = get_coding_image_catalog()
+        self._coding_prepare_lock = threading.Lock()
 
     def resolve_build_context_for_image(self, image: str) -> Optional[Path]:
-        context = DEFAULT_PRESET_BUILD_CONTEXTS.get(image)
-        if context and context.exists():
-            return context
-        return DEFAULT_CODE_SERVER_BUILD_CONTEXT if DEFAULT_CODE_SERVER_BUILD_CONTEXT.exists() else None
+        return resolve_managed_build_context(image)
 
     def connect(self) -> Tuple[bool, str]:
         docker_module, module_error = self._load_or_install_docker_sdk()
@@ -262,18 +219,40 @@ class DockerManager:
     def start_code_server_session(
         self,
         session_id: str,
-        image: str = "computex-code",
+        image: str = "computex-python-interpreter",
         password: Optional[str] = None,
         session_root: Optional[str] = None,
         workspace_path: Optional[str] = None,
         progress_callback=None,
+        _allow_python_recovery: bool = True,
     ) -> Tuple[bool, str, Dict[str, Any]]:
         if not self.ping():
             return False, "Docker engine not available", {}
 
-        self.record_activity(f"launch {session_id} -> image {image}")
-        force_rebuild = os.environ.get("COMPUTEX_FORCE_REBUILD_IMAGES", "").lower() in ("1", "true", "yes", "on")
-        image_ok, image_msg = self.ensure_image(image, progress_callback=progress_callback, force_rebuild=force_rebuild)
+        requested_image = (image or "").strip() or "computex-python-interpreter"
+        legacy_aliases = {
+            "computex-code": "computex-python-interpreter",
+            "computex-python": "computex-python-interpreter",
+        }
+        effective_image = legacy_aliases.get(requested_image, requested_image)
+        if effective_image != requested_image:
+            self.record_activity(
+                f"launch {session_id} requested legacy image {requested_image}; using {effective_image}"
+            )
+            if progress_callback:
+                progress_callback(
+                    "image.override",
+                    f"Overriding legacy image {requested_image} to {effective_image}",
+                    {"requested_image": requested_image, "image": effective_image},
+                )
+        else:
+            self.record_activity(f"launch {session_id} -> image {effective_image}")
+
+        image_ok, image_msg = self.ensure_image(
+            effective_image,
+            progress_callback=progress_callback,
+            force_rebuild=False,
+        )
         if not image_ok:
             return False, image_msg, {}
 
@@ -302,9 +281,13 @@ class DockerManager:
             try:
                 self.record_activity(f"starting container {container_name} on port {host_port}")
                 if progress_callback:
-                    progress_callback("container.start", f"Starting container on port {host_port}", {"port": host_port})
+                    progress_callback(
+                        "container.start",
+                        f"Starting container on port {host_port}",
+                        {"port": host_port, "image": effective_image},
+                    )
                 container = self.client.containers.run(
-                    image,
+                    effective_image,
                     name=container_name,
                     detach=True,
                     environment={"PASSWORD": chosen_password},
@@ -312,13 +295,34 @@ class DockerManager:
                     volumes={str(resolved_workspace_path): {"bind": "/home/coder", "mode": "rw"}},
                     working_dir="/home/coder/project",
                 )
-                if image in PYTHON_READY_IMAGES:
+                if is_python_ready_image(effective_image):
                     python_ready_ok, python_ready_msg = self._bootstrap_python_workspace(container)
                     if not python_ready_ok:
                         try:
                             container.remove(force=True)
                         except Exception:
                             pass
+                        if _allow_python_recovery:
+                            fallback_image = "computex-python-interpreter"
+                            if effective_image != fallback_image:
+                                if progress_callback:
+                                    progress_callback(
+                                        "python.recover",
+                                        f"Python bootstrap failed on {effective_image}. Retrying with {fallback_image}.",
+                                        {"from_image": effective_image, "to_image": fallback_image},
+                                    )
+                                self.record_activity(
+                                    f"python bootstrap failed on {effective_image}; retrying launch with {fallback_image}"
+                                )
+                            return self.start_code_server_session(
+                                session_id=session_id,
+                                image=fallback_image,
+                                password=password,
+                                session_root=session_root,
+                                workspace_path=workspace_path,
+                                progress_callback=progress_callback,
+                                _allow_python_recovery=False,
+                            )
                         return False, python_ready_msg, {}
                 access_url = f"http://{self._detect_host_ip()}:{host_port}"
                 if progress_callback:
@@ -331,6 +335,7 @@ class DockerManager:
                             "password": chosen_password,
                             "container_name": container.name,
                             "workspace_path": str(resolved_workspace_path),
+                            "image": effective_image,
                         },
                     )
                 return True, f"Code server started on port {host_port}", {
@@ -339,6 +344,7 @@ class DockerManager:
                     "port": host_port,
                     "access_url": access_url,
                     "workspace_path": str(resolved_workspace_path),
+                    "image": effective_image,
                 }
             except Exception as exc:
                 last_error = exc
@@ -351,22 +357,49 @@ class DockerManager:
 
     def _bootstrap_python_workspace(self, container) -> Tuple[bool, str]:
         try:
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                "PYTHON_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
+                "PYTHON_EXT_CACHE='/opt/computex/extensions-cache' && "
+                "if ! code-server --list-extensions | grep -Fxiq ms-python.python; then "
+                "if [ -d \"$PYTHON_EXT_CACHE\" ]; then "
+                "mkdir -p \"$PYTHON_EXT_DIR\" && "
+                "cp -a \"$PYTHON_EXT_CACHE\"/. \"$PYTHON_EXT_DIR\"/ >/dev/null 2>&1 || true; "
+                "fi; "
+                "if ! code-server --list-extensions | grep -Fxiq ms-python.python; then "
+                "code-server --install-extension ms-python.python >/dev/null 2>&1 || true; "
+                "fi; "
+                "fi && "
+                "code-server --list-extensions | grep -Fxiq ms-python.python && "
+                "python3 - <<'PY'\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "settings_targets = [\n"
+                "    Path('/home/coder/project/.vscode/settings.json'),\n"
+                "    Path('/home/coder/.local/share/code-server/User/settings.json'),\n"
+                "]\n"
+                "for settings_file in settings_targets:\n"
+                "    settings_file.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    data = {}\n"
+                "    if settings_file.exists():\n"
+                "        try:\n"
+                "            data = json.loads(settings_file.read_text() or '{}')\n"
+                "        except Exception:\n"
+                "            data = {}\n"
+                "    data['python.defaultInterpreterPath'] = '/home/coder/project/.venv/bin/python'\n"
+                "    data['python.terminal.activateEnvironment'] = True\n"
+                "    data['python.analysis.autoImportCompletions'] = True\n"
+                "    settings_file.write_text(json.dumps(data, indent=2))\n"
+                "PY\n"
+                "test -x .venv/bin/python"
+            )
             result = container.exec_run(
                 [
                     "/bin/bash",
                     "-lc",
-                    (
-                        "cd /home/coder/project && "
-                        "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi && "
-                        "mkdir -p .vscode && "
-                        "if [ ! -f .vscode/settings.json ]; then "
-                        "printf '%s' "
-                        '\'{\n'
-                        '  "python.defaultInterpreterPath": "/home/coder/project/.venv/bin/python",\n'
-                        '  "python.terminal.activateEnvironment": true\n'
-                        "}\' > .vscode/settings.json; "
-                        "fi"
-                    ),
+                    bootstrap_cmd,
                 ],
                 user="coder",
             )
@@ -436,24 +469,25 @@ class DockerManager:
         if not self.ping():
             return False, "Docker engine not available"
 
-        state = self.state_store.load()
-        if state.get("coding_images_prepared") and not force:
-            return True, "Coding images already prepared"
+        with self._coding_prepare_lock:
+            state = self.state_store.load()
+            if state.get("coding_images_prepared") and not force:
+                return True, "Coding images already prepared"
 
-        prepared = []
-        failures = []
-        for image in self.coding_image_catalog:
-            ok, msg = self.ensure_image(image, force_rebuild=force)
-            if ok:
-                prepared.append(image)
-            else:
-                failures.append(f"{image}: {msg}")
+            prepared = []
+            failures = []
+            for image in self.coding_image_catalog:
+                ok, msg = self.ensure_image(image, force_rebuild=force)
+                if ok:
+                    prepared.append(image)
+                else:
+                    failures.append(f"{image}: {msg}")
 
-        if failures:
-            return False, "Some coding images failed to prepare: " + " | ".join(failures)
-        state["coding_images_prepared"] = True
-        self.state_store.save(state)
-        return True, "Coding images ready: " + ", ".join(prepared)
+            if failures:
+                return False, "Some coding images failed to prepare: " + " | ".join(failures)
+            state["coding_images_prepared"] = True
+            self.state_store.save(state)
+            return True, "Coding images ready: " + ", ".join(prepared)
 
     def _find_available_port(self, start_port: int = 8000, end_port: int = 8999) -> int:
         allocated_ports = self._get_allocated_host_ports()

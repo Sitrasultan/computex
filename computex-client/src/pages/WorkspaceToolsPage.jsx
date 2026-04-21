@@ -6,7 +6,7 @@ import { createAppSocket, emitSessionStart } from "../utils/socket";
 const WORKSPACE_REQUEST_TIMEOUT_MS = 15000;
 const SESSION_LAUNCH_TIMEOUT_MS = 3 * 60 * 1000;
 const SESSION_POLL_REQUEST_TIMEOUT_MS = 1500;
-const PYTHON_IMAGE_KEY = "computex-python";
+const PYTHON_IMAGE_KEY = "computex-python-interpreter";
 const PYTHON_ONLY_TOOLS = new Set(["python", "git"]);
 const LOCAL_PRESETS = [
   { key: "python", name: "Python Workspace", tools: ["python", "git"] },

@@ -59,6 +59,8 @@ class ComputeXHostDashboard(tk.Tk):
         self.last_metric_sample = None
         self.metric_job = None
         self.watch_job = None
+        self.startup_image_prepare_thread = None
+        self._dashboard_scroll_canvas = None
 
         self.cpu_var = tk.IntVar(value=0)
         self.ram_var = tk.IntVar(value=0)
@@ -94,6 +96,10 @@ class ComputeXHostDashboard(tk.Tk):
         self.after(80, self._start_launch_flow)
 
     def _clear_root(self):
+        self.unbind_all("<MouseWheel>")
+        self.unbind_all("<Button-4>")
+        self.unbind_all("<Button-5>")
+        self._dashboard_scroll_canvas = None
         if self.metric_job:
             self.after_cancel(self.metric_job)
             self.metric_job = None
@@ -129,6 +135,7 @@ class ComputeXHostDashboard(tk.Tk):
         if not ok:
             self._show_docker_wizard(message, self.docker.last_connect_result.get("requires_manual_start"))
             return
+        self._start_startup_image_prepare()
         if self.account_token and self.allow_auto_restore:
             self._show_sign_in_wizard(auto_restore=True)
             self._link_account(token=self.account_token, auto=True, on_success=self._show_dashboard, on_failure=self._restore_failed)
@@ -261,6 +268,7 @@ class ComputeXHostDashboard(tk.Tk):
 
     def _after_retry(self, ok, msg):
         if ok:
+            self._start_startup_image_prepare()
             self._log_activity("Docker engine connected")
             server_registered = self._check_server_device_registered()
             known_host = self._has_registered_before() if server_registered is None else bool(server_registered or self._has_registered_before())
@@ -277,8 +285,57 @@ class ComputeXHostDashboard(tk.Tk):
 
     def _show_dashboard(self):
         self._clear_root()
-        root = tk.Frame(self.root_container, bg=self.colors["bg"])
-        root.grid(row=0, column=0, sticky="nsew")
+
+        shell = tk.Frame(self.root_container, bg=self.colors["bg"])
+        shell.grid(row=0, column=0, sticky="nsew")
+        shell.grid_rowconfigure(0, weight=1)
+        shell.grid_columnconfigure(0, weight=1)
+
+        dashboard_canvas = tk.Canvas(shell, bg=self.colors["bg"], highlightthickness=0, bd=0)
+        dashboard_canvas.grid(row=0, column=0, sticky="nsew")
+        scroll = tk.Scrollbar(shell, orient="vertical", command=dashboard_canvas.yview)
+        scroll.grid(row=0, column=1, sticky="ns")
+        dashboard_canvas.configure(yscrollcommand=scroll.set)
+
+        root = tk.Frame(dashboard_canvas, bg=self.colors["bg"])
+        root_window = dashboard_canvas.create_window((0, 0), window=root, anchor="nw")
+
+        def _is_descendant(widget, ancestor):
+            current = widget
+            while current is not None:
+                if current == ancestor:
+                    return True
+                current = current.master
+            return False
+
+        def _sync_dashboard_scrollregion(_event=None):
+            dashboard_canvas.configure(scrollregion=dashboard_canvas.bbox("all"))
+
+        def _sync_dashboard_width(event):
+            dashboard_canvas.itemconfigure(root_window, width=event.width)
+
+        def _dashboard_mousewheel(event):
+            if not _is_descendant(event.widget, root):
+                return
+            if event.delta:
+                step = -int(event.delta / 120)
+            elif getattr(event, "num", None) == 4:
+                step = -1
+            elif getattr(event, "num", None) == 5:
+                step = 1
+            else:
+                step = 0
+            if step:
+                dashboard_canvas.yview_scroll(step, "units")
+                return "break"
+
+        root.bind("<Configure>", _sync_dashboard_scrollregion)
+        dashboard_canvas.bind("<Configure>", _sync_dashboard_width)
+        self.bind_all("<MouseWheel>", _dashboard_mousewheel)
+        self.bind_all("<Button-4>", _dashboard_mousewheel)
+        self.bind_all("<Button-5>", _dashboard_mousewheel)
+        self._dashboard_scroll_canvas = dashboard_canvas
+
         root.grid_columnconfigure(0, weight=1)
         root.grid_rowconfigure(2, weight=1)
 
@@ -332,9 +389,7 @@ class ComputeXHostDashboard(tk.Tk):
         security_card, security = self._card(right_col, "Safety and cleanup")
         security_card.grid(row=1, column=0, sticky="ew", pady=(0, 12))
         activity_card, activity = self._card(right_col, "Activity feed")
-        activity_card.grid(row=2, column=0, sticky="nsew", pady=(0, 12))
-        lab_card, lab = self._card(right_col, "Docker lab")
-        lab_card.grid(row=3, column=0, sticky="ew")
+        activity_card.grid(row=2, column=0, sticky="nsew")
 
         row = tk.Frame(orch, bg=self.colors["card"])
         row.pack(anchor="w", pady=(0, 10))
@@ -377,20 +432,6 @@ class ComputeXHostDashboard(tk.Tk):
         self.activity_list.pack(fill="both", expand=True)
         for item in self.docker.get_saved_activity()[:20]:
             self.activity_list.insert("end", item)
-
-        self.lab_image_var = tk.StringVar(value="computex-container")
-        self.lab_container_var = tk.StringVar(value="computex_lab_test")
-        for label, variable in [("Image", self.lab_image_var), ("Container", self.lab_container_var)]:
-            tk.Label(lab, text=label, bg=self.colors["card"], fg=self.colors["muted"], font=("Segoe UI", 10)).pack(anchor="w", pady=(0, 4))
-            self._entry(lab, variable).pack(fill="x", pady=(0, 8))
-        lab_row = tk.Frame(lab, bg=self.colors["card"])
-        lab_row.pack(anchor="w", pady=(4, 8))
-        self._button(lab_row, "Pull Image", self._lab_pull_image, self.colors["accent"], "#052019").pack(side="left", padx=(0, 8))
-        self._button(lab_row, "Start", self._lab_start_container, self.colors["accent2"], "#051628").pack(side="left", padx=(0, 8))
-        self._button(lab_row, "Cleanup", self._lab_remove_container, self.colors["warn"], "#291A00").pack(side="left", padx=(0, 8))
-        self._button(lab_row, "Remove Image", self._lab_remove_image, self.colors["danger"], "#FFFFFF").pack(side="left")
-        self.lab_status = tk.Label(lab, text="Docker lab ready", bg=self.colors["card"], fg=self.colors["muted"], font=("Segoe UI Semibold", 10))
-        self.lab_status.pack(anchor="w")
 
         self._refresh_container_counts()
         self._start_host_bridge()
@@ -709,29 +750,17 @@ class ComputeXHostDashboard(tk.Tk):
             if self.activity_list.size() > 20:
                 self.activity_list.delete(20, "end")
 
-    def _lab_pull_image(self):
-        ok, msg = self.docker.pull_image(self.lab_image_var.get().strip())
-        self._set_lab_status(ok, msg)
+    def _start_startup_image_prepare(self):
+        if self.startup_image_prepare_thread and self.startup_image_prepare_thread.is_alive():
+            return
 
-    def _lab_start_container(self):
-        ok, msg = self.docker.start_container(self.lab_image_var.get().strip(), self.lab_container_var.get().strip())
-        self._set_lab_status(ok, msg)
-        self._refresh_container_counts()
-        self._refresh_dashboard()
+        def worker():
+            self.after(0, lambda: self._log_activity("Preparing coding images during startup..."))
+            ok, msg = self.docker.prepare_coding_images(force=False)
+            self.after(0, lambda: self._log_activity(msg if ok else f"Coding image prepare warning: {msg}"))
 
-    def _lab_remove_container(self):
-        ok, msg = self.docker.stop_remove_container(self.lab_container_var.get().strip())
-        self._set_lab_status(ok, msg)
-        self._refresh_container_counts()
-        self._refresh_dashboard()
-
-    def _lab_remove_image(self):
-        ok, msg = self.docker.remove_image(self.lab_image_var.get().strip(), force=False)
-        self._set_lab_status(ok, msg)
-
-    def _set_lab_status(self, ok, msg):
-        self.lab_status.config(text=msg, fg=self.colors["ok"] if ok else self.colors["danger"])
-        self._log_activity(msg)
+        self.startup_image_prepare_thread = threading.Thread(target=worker, daemon=True)
+        self.startup_image_prepare_thread.start()
 
     def _persist_machine_profile(self):
         state = self.docker.get_state()

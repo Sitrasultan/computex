@@ -166,7 +166,7 @@ export default function WorkspaceManagerPage() {
           workspace_name: "Code Server Session",
           preset_key: "python",
           tools: ["python", "git"],
-          image: "computex-python",
+          image: "computex-python-interpreter",
           skip_workspace: true,
           defer_workspace_save: true,
           async_launch: true,

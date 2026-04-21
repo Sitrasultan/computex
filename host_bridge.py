@@ -109,9 +109,8 @@ class HostBridge:
             return
 
         def _worker():
-            force_rebuild = os.environ.get("COMPUTEX_FORCE_REBUILD_IMAGES", "").lower() in ("1", "true", "yes", "on")
             self.on_log("Preparing coding images on host...")
-            ok, msg = self.docker.prepare_coding_images(force=force_rebuild)
+            ok, msg = self.docker.prepare_coding_images(force=False)
             self.on_log(msg)
             if not ok:
                 self.on_log("Continuing with partial image availability; missing images will be prepared on demand.")
