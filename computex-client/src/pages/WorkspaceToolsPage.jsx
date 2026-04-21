@@ -236,14 +236,42 @@ export default function WorkspaceToolsPage() {
     setLaunching(true);
     try {
       setStatusMessage("Launching code-server...");
+      const workspacePayload = {
+        name,
+        type: "coding",
+        preset_key: usingCustom ? "custom" : "python",
+        tools: toolsForSave,
+        image_key: PYTHON_IMAGE_KEY,
+      };
+
+      let launchWorkspaceId = id || null;
+      if (isExisting) {
+        await requestWithFallback({
+          method: "patch",
+          url: `/api/workspaces/${id}/profile`,
+          data: workspacePayload,
+          timeout: WORKSPACE_REQUEST_TIMEOUT_MS,
+        });
+      } else {
+        const workspaceRes = await requestWithFallback({
+          method: "post",
+          url: "/api/workspaces",
+          data: workspacePayload,
+          timeout: WORKSPACE_REQUEST_TIMEOUT_MS,
+        });
+        launchWorkspaceId = workspaceRes?.data?.workspace?.id || null;
+        if (!launchWorkspaceId) {
+          throw new Error("Workspace creation failed");
+        }
+      }
+
       const launchPayload = {
         environment: "coding",
         workspace_name: name,
+        workspace_id: launchWorkspaceId,
         preset_key: usingCustom ? "custom" : "python",
         tools: toolsForSave,
         image: PYTHON_IMAGE_KEY,
-        skip_workspace: true,
-        defer_workspace_save: true,
       };
       const launchRes = await launchOverSocket(launchPayload);
 

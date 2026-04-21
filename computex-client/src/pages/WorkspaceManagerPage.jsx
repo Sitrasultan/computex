@@ -164,11 +164,10 @@ export default function WorkspaceManagerPage() {
         {
           environment: "coding",
           workspace_name: "Code Server Session",
+          workspace_id: workspaceId,
           preset_key: "python",
           tools: ["python", "git"],
           image: "computex-python-interpreter",
-          skip_workspace: true,
-          defer_workspace_save: true,
           async_launch: true,
         },
         SESSION_LAUNCH_TIMEOUT_MS

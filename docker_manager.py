@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 from urllib.parse import urlparse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -413,6 +413,203 @@ class DockerManager:
                 output = output.decode("utf-8", errors="replace")
             return False, f"Python workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
         return True, "Python workspace ready"
+
+    def _resolve_workspace_browse_root(self, workspace_path: str) -> Tuple[bool, str, Optional[Path], Optional[Path]]:
+        root = Path(workspace_path or "").expanduser()
+        if not str(root).strip():
+            return False, "Workspace path is required", None, None
+        if not root.exists():
+            return False, f"Workspace path not found: {workspace_path}", None, None
+        project_root = root / "project"
+        browse_root = project_root if project_root.exists() else root
+        return True, "Workspace resolved", root.resolve(), browse_root.resolve()
+
+    def _path_within_root(self, root: Path, target: Path) -> bool:
+        try:
+            resolved_root = root.resolve()
+            resolved_target = target.resolve()
+        except Exception:
+            return False
+        return str(resolved_target) == str(resolved_root) or str(resolved_target).startswith(str(resolved_root) + os.sep)
+
+    def list_workspace_files(
+        self,
+        workspace_path: str,
+        max_files: int = 500,
+        max_depth: int = 10,
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        ok, msg, _workspace_root, browse_root = self._resolve_workspace_browse_root(workspace_path)
+        if not ok or not browse_root:
+            return False, msg, {}
+
+        try:
+            queue: List[Tuple[Path, str, int]] = [(browse_root, "", 0)]
+            files: List[Dict[str, Any]] = []
+            truncated = False
+
+            while queue and len(files) < max_files:
+                current_path, current_rel, depth = queue.pop(0)
+                try:
+                    entries = sorted(current_path.iterdir(), key=lambda item: item.name.lower())
+                except Exception:
+                    continue
+
+                for entry in entries:
+                    if entry.is_symlink():
+                        continue
+                    rel = f"{current_rel}/{entry.name}" if current_rel else entry.name
+                    if not self._path_within_root(browse_root, entry):
+                        continue
+                    if entry.is_dir():
+                        if depth < max_depth:
+                            queue.append((entry, rel, depth + 1))
+                        continue
+                    if not entry.is_file():
+                        continue
+                    try:
+                        stat = entry.stat()
+                    except Exception:
+                        continue
+                    files.append(
+                        {
+                            "path": rel.replace("\\", "/"),
+                            "size": int(stat.st_size),
+                            "created_at": datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc).isoformat(),
+                            "modified_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                        }
+                    )
+                    if len(files) >= max_files:
+                        truncated = True
+                        break
+
+            return True, "Workspace files listed", {
+                "files": files,
+                "truncated": truncated,
+                "root_path": str(browse_root).replace("\\", "/"),
+            }
+        except Exception as exc:
+            return False, f"List workspace files failed: {exc}", {}
+
+    def read_workspace_file(
+        self,
+        workspace_path: str,
+        relative_path: str,
+        max_bytes: int = 200 * 1024,
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        ok, msg, _workspace_root, browse_root = self._resolve_workspace_browse_root(workspace_path)
+        if not ok or not browse_root:
+            return False, msg, {}
+
+        normalized = str(relative_path or "").strip().replace("\\", "/").lstrip("/")
+        if not normalized:
+            return False, "Relative file path is required", {}
+        segments = [segment for segment in normalized.split("/") if segment]
+        if any(segment in (".", "..") for segment in segments):
+            return False, "Invalid file path", {}
+
+        target = browse_root.joinpath(*segments).resolve()
+        if not self._path_within_root(browse_root, target):
+            return False, "Invalid file path", {}
+        if not target.exists() or not target.is_file():
+            return False, "File not found", {}
+
+        try:
+            stat = target.stat()
+            preview_limit = max(1, int(max_bytes) + 1)
+            with target.open("rb") as handle:
+                preview = handle.read(preview_limit)
+            truncated = int(stat.st_size) > int(max_bytes)
+            preview_view = preview[: int(max_bytes)]
+            is_binary = b"\x00" in preview_view
+            content = None if is_binary else preview_view.decode("utf-8", errors="replace")
+
+            return True, "Workspace file read", {
+                "path": normalized,
+                "size": int(stat.st_size),
+                "created_at": datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc).isoformat(),
+                "modified_at": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                "binary": is_binary,
+                "truncated": truncated,
+                "content": content,
+                "root_path": str(browse_root).replace("\\", "/"),
+            }
+        except Exception as exc:
+            return False, f"Read workspace file failed: {exc}", {}
+
+    def get_workspace_last_activity(
+        self,
+        workspace_path: str,
+        max_depth: int = 14,
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        ok, msg, _workspace_root, browse_root = self._resolve_workspace_browse_root(workspace_path)
+        if not ok or not browse_root:
+            return False, msg, {}
+
+        managed_segments = {
+            ".venv",
+            ".vscode",
+            ".config",
+            ".local",
+            ".cache",
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".ipynb_checkpoints",
+        }
+
+        try:
+            queue: List[Tuple[Path, str, int]] = [(browse_root, "", 0)]
+            latest_ts = None
+            latest_path = None
+
+            while queue:
+                current_path, current_rel, depth = queue.pop(0)
+                try:
+                    entries = sorted(current_path.iterdir(), key=lambda item: item.name.lower())
+                except Exception:
+                    continue
+
+                for entry in entries:
+                    if entry.is_symlink():
+                        continue
+                    rel = f"{current_rel}/{entry.name}" if current_rel else entry.name
+                    if not self._path_within_root(browse_root, entry):
+                        continue
+                    if entry.is_dir():
+                        if entry.name in managed_segments:
+                            continue
+                        if depth < max_depth:
+                            queue.append((entry, rel, depth + 1))
+                        continue
+                    if not entry.is_file():
+                        continue
+                    if any(segment in managed_segments for segment in rel.split("/")):
+                        continue
+                    try:
+                        stat = entry.stat()
+                    except Exception:
+                        continue
+
+                    candidate = max(float(stat.st_mtime or 0), float(stat.st_ctime or 0))
+                    if latest_ts is None or candidate > latest_ts:
+                        latest_ts = candidate
+                        latest_path = rel.replace("\\", "/")
+
+            if latest_ts is None:
+                return True, "No user activity files found", {
+                    "last_activity_at": None,
+                    "last_activity_path": None,
+                    "root_path": str(browse_root).replace("\\", "/"),
+                }
+
+            return True, "Workspace activity detected", {
+                "last_activity_at": datetime.fromtimestamp(latest_ts, tz=timezone.utc).isoformat(),
+                "last_activity_path": latest_path,
+                "root_path": str(browse_root).replace("\\", "/"),
+            }
+        except Exception as exc:
+            return False, f"Workspace activity scan failed: {exc}", {}
 
     def delete_workspace_data(self, workspace_path: str) -> Tuple[bool, str]:
         target = Path(workspace_path)

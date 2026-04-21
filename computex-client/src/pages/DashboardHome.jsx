@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import "./dashboard.css";
 import { api, requestWithFallback } from "../utils/api";
 import { createAppSocket, emitSessionStart } from "../utils/socket";
@@ -348,15 +349,20 @@ function CreditsCard({ credits }) {
 
 
 // ---------- SessionsCard ----------
- function SessionsCard({ sessions = [], theme, stopSession, loadingSession, timers
-
- }) {
+ function SessionsCard({ sessions = [], theme, stopSession, loadingSession, timers }) {
   const isDark = theme === "dark";
+  const navigate = useNavigate();
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const initialVisibleCount = 5;
 
   // Include stopped sessions so button and status are visible
   const recentSessions = (sessions || []).filter(
     (s) => ["running", "open", "stopped"].includes(s.status)
   );
+  const visibleSessions = showAllSessions
+    ? recentSessions
+    : recentSessions.slice(0, initialVisibleCount);
+  const hiddenSessionsCount = Math.max(0, recentSessions.length - initialVisibleCount);
 
   // Status color helper including "stopped"
   const statusColor = (status) => {
@@ -399,10 +405,19 @@ function CreditsCard({ credits }) {
           </div>
         )}
 
-        {recentSessions.map((s) => (
+        {visibleSessions.map((s) => (
           <div
             key={s.id}
-            className="flex flex-col sm:flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-3 px-3 py-2 rounded-xl hover:bg-white/30 dark:hover:bg-white/10 backdrop-blur-sm transition"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/sessions/${s.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                navigate(`/sessions/${s.id}`);
+              }
+            }}
+            className="flex flex-col sm:flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-3 px-3 py-2 rounded-xl hover:bg-white/30 dark:hover:bg-white/10 backdrop-blur-sm transition cursor-pointer"
           >
             <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
               <div
@@ -424,17 +439,30 @@ function CreditsCard({ credits }) {
 
                 
            </div>
-           </div>
+            </div>
 
             {/* Status badge + Stop button */}
-            <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/sessions/${s.id}`);
+                }}
+                className="text-xs px-3 py-1 rounded bg-sky-500 text-white hover:bg-sky-600"
+              >
+                View files
+              </button>
               <div className={`text-xs px-3 py-1 rounded-full ${statusColor(s.status)}`}>
                 {s.status}
               </div>
 
               {(s.status === "running" || s.status === "open") && (
                 <button
-                  onClick={() => stopSession(s.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    stopSession(s.id);
+                  }}
                   disabled={loadingSession === s.id || s.status === "stopped"}
                   className={`text-xs px-3 py-1 rounded ${
                     s.status === "stopped"
@@ -453,13 +481,30 @@ function CreditsCard({ credits }) {
               )}
 
               {s.status === "stopped" && loadingSession !== s.id && (
-                <div className="text-xs px-3 py-1 rounded bg-gray-400 text-white cursor-not-allowed">
+                <div
+                  className="text-xs px-3 py-1 rounded bg-gray-400 text-white cursor-not-allowed"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   Stopped
                 </div>
               )}
             </div>
           </div>
         ))}
+
+        {hiddenSessionsCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAllSessions((current) => !current)}
+            className={`self-start text-xs px-3 py-1 rounded-lg border ${
+              isDark
+                ? "border-white/10 text-slate-200 hover:bg-white/10"
+                : "border-slate-300 text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            {showAllSessions ? "Show less" : `Show more (${hiddenSessionsCount})`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -784,11 +829,10 @@ useEffect(() => {
       {
         environment: "coding",
         workspace_name: "Code Server Session",
+        workspace_id: workspaceId,
         preset_key: "python",
         tools: ["python", "git"],
         image: "computex-python-interpreter",
-        skip_workspace: true,
-        defer_workspace_save: true,
         async_launch: true,
       },
       3 * 60 * 1000
@@ -1039,7 +1083,5 @@ useEffect(() => {
     </div>
   );
 } 
-
-
 
 

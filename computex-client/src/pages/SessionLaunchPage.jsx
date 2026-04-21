@@ -182,8 +182,6 @@ export default function SessionLaunchPage() {
         payload.preset_key = "code";
         payload.tools = ["git"];
         payload.image = "computex-code";
-        payload.skip_workspace = true;
-        payload.defer_workspace_save = true;
       }
       const res = await emitSessionStart(payload, SESSION_LAUNCH_TIMEOUT_MS);
       const session = res?.session;

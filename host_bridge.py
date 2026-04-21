@@ -192,6 +192,43 @@ class HostBridge:
                 ok, msg = self.docker.stop_remove_container(name=data.get("name", "computex_session"))
             elif command == "delete_workspace_data":
                 ok, msg = self.docker.delete_workspace_data(workspace_path=data.get("workspacePath", ""))
+            elif command == "list_workspace_files":
+                max_files = data.get("maxFiles", 500)
+                max_depth = data.get("maxDepth", 10)
+                try:
+                    max_files = int(max_files)
+                except Exception:
+                    max_files = 500
+                try:
+                    max_depth = int(max_depth)
+                except Exception:
+                    max_depth = 10
+                ok, msg, meta = self.docker.list_workspace_files(
+                    workspace_path=data.get("workspacePath", ""),
+                    max_files=max_files,
+                    max_depth=max_depth,
+                )
+            elif command == "read_workspace_file":
+                max_bytes = data.get("maxBytes", 200 * 1024)
+                try:
+                    max_bytes = int(max_bytes)
+                except Exception:
+                    max_bytes = 200 * 1024
+                ok, msg, meta = self.docker.read_workspace_file(
+                    workspace_path=data.get("workspacePath", ""),
+                    relative_path=data.get("relativePath", ""),
+                    max_bytes=max_bytes,
+                )
+            elif command == "workspace_last_activity":
+                max_depth = data.get("maxDepth", 14)
+                try:
+                    max_depth = int(max_depth)
+                except Exception:
+                    max_depth = 14
+                ok, msg, meta = self.docker.get_workspace_last_activity(
+                    workspace_path=data.get("workspacePath", ""),
+                    max_depth=max_depth,
+                )
             elif command == "pull_image":
                 ok, msg = self.docker.pull_image(image=data.get("image", "computex-dev-env"))
             else:

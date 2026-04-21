@@ -4,6 +4,7 @@ import DashboardHome from "./pages/DashboardHome";
 import HostRegister from "./pages/HostRegister";
 import AdminDashboard from "./pages/AdminDashboard";
 import SessionLaunchPage from "./pages/SessionLaunchPage";
+import SessionFilesPage from "./pages/SessionFilesPage";
 import WorkspaceManagerPage from "./pages/WorkspaceManagerPage";
 import WorkspaceToolsPage from "./pages/WorkspaceToolsPage";
 
@@ -13,6 +14,7 @@ export default function App() {
       <Route path="/" element={<WelcomePage />} />
       <Route path="/dashboard" element={<DashboardHome />} />
       <Route path="/sessions/new" element={<SessionLaunchPage />} />
+      <Route path="/sessions/:id" element={<SessionFilesPage />} />
       <Route path="/workspaces" element={<WorkspaceManagerPage />} />
       <Route path="/workspaces/new" element={<WorkspaceToolsPage />} />
       <Route path="/workspaces/:id/tools" element={<WorkspaceToolsPage />} />

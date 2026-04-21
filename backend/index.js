@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import sqlite3 from "sqlite3";
+import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
@@ -38,6 +39,32 @@ const DEFAULT_WORKSPACE_ROOT = process.env.COMPUTEX_WORKSPACE_ROOT || "C:/comput
 const CODING_SESSION_HOST_TIMEOUT_MS = process.env.COMPUTEX_CODING_HOST_TIMEOUT_MS
   ? Number(process.env.COMPUTEX_CODING_HOST_TIMEOUT_MS)
   : 3 * 60 * 1000;
+const SESSION_FILE_MAX_ITEMS = process.env.COMPUTEX_SESSION_FILE_MAX_ITEMS
+  ? Number(process.env.COMPUTEX_SESSION_FILE_MAX_ITEMS)
+  : 500;
+const SESSION_FILE_MAX_DEPTH = process.env.COMPUTEX_SESSION_FILE_MAX_DEPTH
+  ? Number(process.env.COMPUTEX_SESSION_FILE_MAX_DEPTH)
+  : 10;
+const SESSION_FILE_PREVIEW_BYTES = process.env.COMPUTEX_SESSION_FILE_PREVIEW_BYTES
+  ? Number(process.env.COMPUTEX_SESSION_FILE_PREVIEW_BYTES)
+  : 200 * 1024;
+const SESSION_FILE_TIME_TOLERANCE_MS = 5000;
+const SESSION_INACTIVITY_LIMIT_MS = 60 * 60 * 1000;
+const SESSION_INACTIVITY_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+const PLATFORM_MANAGED_PATH_SEGMENTS = new Set([
+  ".venv",
+  ".vscode",
+  ".config",
+  ".local",
+  ".cache",
+  "__pycache__",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".ipynb_checkpoints",
+]);
+const EMPTY_SESSION_RETENTION_MS = 24 * 60 * 60 * 1000;
+const EMPTY_SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 const GLOBAL_HOST_POOL_ENABLED = !["0", "false", "off", "no"].includes(
   String(process.env.COMPUTEX_GLOBAL_HOST_POOL ?? "true").toLowerCase()
 );
@@ -799,6 +826,677 @@ function mapSessionToContainer(session) {
   };
 }
 
+function normalizeComparablePath(targetPath) {
+  return path.resolve(String(targetPath || "")).replace(/\\/g, "/");
+}
+
+function isPathInsideRoot(rootPath, targetPath) {
+  const normalizedRoot = normalizeComparablePath(rootPath);
+  const normalizedTarget = normalizeComparablePath(targetPath);
+  return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}/`);
+}
+
+function normalizeRelativePath(rawPath) {
+  const normalized = String(rawPath || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+  if (!normalized) return "";
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.some((segment) => segment === "." || segment === "..")) {
+    return "";
+  }
+  return segments.join("/");
+}
+
+function isPlatformManagedRelativePath(relativePath) {
+  const normalized = normalizeRelativePath(relativePath);
+  if (!normalized) return false;
+  const segments = normalized.split("/").filter(Boolean);
+  return segments.some((segment) => PLATFORM_MANAGED_PATH_SEGMENTS.has(segment));
+}
+
+function parseTimestampMs(value) {
+  if (!value) return Number.NaN;
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function isSessionOwnedUserFile(session, file) {
+  if (!file?.path) return false;
+  if (isPlatformManagedRelativePath(file.path)) return false;
+
+  const sessionStartMs = parseTimestampMs(session?.started_at);
+  if (!Number.isFinite(sessionStartMs)) return true;
+
+  const createdMs = parseTimestampMs(file.created_at);
+  const modifiedMs = parseTimestampMs(file.modified_at);
+  const cutoff = sessionStartMs - SESSION_FILE_TIME_TOLERANCE_MS;
+  const createdInSession = Number.isFinite(createdMs) && createdMs >= cutoff;
+  const modifiedInSession = Number.isFinite(modifiedMs) && modifiedMs >= cutoff;
+  return createdInSession || modifiedInSession;
+}
+
+function filterSessionFilesForUser(session, files = []) {
+  return (files || []).filter((file) => isSessionOwnedUserFile(session, file));
+}
+
+async function getLocalWorkspaceLastActivityAt(
+  browseRootPath,
+  { maxDepth = Math.max(4, SESSION_FILE_MAX_DEPTH + 4) } = {}
+) {
+  const rootPath = path.resolve(browseRootPath);
+  const queue = [{ fullPath: rootPath, relativePath: "", depth: 0 }];
+  let latestMs = Number.NaN;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    let entries = [];
+    try {
+      entries = await fs.readdir(current.fullPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+
+      const relativePath = current.relativePath
+        ? `${current.relativePath}/${entry.name}`
+        : entry.name;
+      const nextPath = path.resolve(current.fullPath, entry.name);
+      if (!isPathInsideRoot(rootPath, nextPath)) {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        if (PLATFORM_MANAGED_PATH_SEGMENTS.has(entry.name)) {
+          continue;
+        }
+        if (current.depth < maxDepth) {
+          queue.push({
+            fullPath: nextPath,
+            relativePath,
+            depth: current.depth + 1,
+          });
+        }
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (isPlatformManagedRelativePath(relativePath)) {
+        continue;
+      }
+
+      let stat = null;
+      try {
+        stat = await fs.stat(nextPath);
+      } catch {
+        stat = null;
+      }
+      if (!stat?.isFile()) {
+        continue;
+      }
+      const modifiedMs = Number(stat.mtimeMs || 0);
+      const createdMs = Number(stat.birthtimeMs || 0);
+      const candidateMs = Math.max(modifiedMs, createdMs);
+      if (Number.isFinite(candidateMs) && (!Number.isFinite(latestMs) || candidateMs > latestMs)) {
+        latestMs = candidateMs;
+      }
+    }
+  }
+
+  if (!Number.isFinite(latestMs)) {
+    return null;
+  }
+  return new Date(latestMs).toISOString();
+}
+
+async function getSessionLastActivityAtFromHost(session, workspacePath) {
+  const dispatchTarget = await getSessionDispatchTarget(session);
+  if (!dispatchTarget?.deviceId || !hostSockets.has(dispatchTarget.deviceId)) {
+    return null;
+  }
+
+  try {
+    const response = await emitHostCommand(
+      dispatchTarget.deviceId,
+      "workspace_last_activity",
+      { workspacePath },
+      30000
+    );
+    if (!response?.last_activity_at) {
+      return null;
+    }
+    return String(response.last_activity_at);
+  } catch (err) {
+    fastify.log.warn(
+      { sessionId: session?.id, err: err?.message || err },
+      "session.activity.host_probe.failed"
+    );
+    return null;
+  }
+}
+
+async function getSessionLastActivityAt(session) {
+  const baseMs = parseTimestampMs(session?.started_at);
+  let bestMs = Number.isFinite(baseMs) ? baseMs : Number.NaN;
+  const { workspacePath, browseRootPath } = await resolveSessionBrowseRootPath(session, session?.user_id);
+  if (!workspacePath || !browseRootPath) {
+    return Number.isFinite(bestMs) ? new Date(bestMs).toISOString() : null;
+  }
+
+  let detectedActivityAt = null;
+  if (await pathExists(browseRootPath)) {
+    detectedActivityAt = await getLocalWorkspaceLastActivityAt(browseRootPath);
+  } else {
+    detectedActivityAt = await getSessionLastActivityAtFromHost(session, workspacePath);
+  }
+
+  const detectedMs = parseTimestampMs(detectedActivityAt);
+  if (Number.isFinite(detectedMs) && (!Number.isFinite(bestMs) || detectedMs > bestMs)) {
+    bestMs = detectedMs;
+  }
+
+  return Number.isFinite(bestMs) ? new Date(bestMs).toISOString() : null;
+}
+
+async function autoStopSessionForInactivity(session, lastActivityAt) {
+  const endedAt = new Date().toISOString();
+  const updateResult = await run(
+    "UPDATE sessions SET status = ?, ended_at = ? WHERE id = ? AND status IN ('running', 'open', 'starting')",
+    ["stopped", endedAt, session.id]
+  );
+  if (!updateResult?.changes) {
+    return false;
+  }
+
+  if (session.workspace_id) {
+    await run("UPDATE workspaces SET last_used = ? WHERE id = ?", [endedAt, session.workspace_id]);
+  } else if (session.environment_type === "coding" && session.workspace_path) {
+    const tools = sanitizeWorkspaceTools(safeJsonParse(session.selected_tools, []));
+    const presetKey = session.preset_key || "python";
+    try {
+      const createdWorkspace = await createWorkspaceForUser(session.user_id, {
+        name: session.title || "Coding Workspace",
+        type: "coding",
+        path: session.workspace_path,
+        preset_key: presetKey,
+        tools,
+        image_key: session.image || null,
+      });
+      await run("UPDATE sessions SET workspace_id = ? WHERE id = ?", [createdWorkspace.id, session.id]);
+    } catch (err) {
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.inactivity.workspace_link.failed"
+      );
+    }
+  }
+
+  const dispatchTarget = await getSessionDispatchTarget(session);
+  if (dispatchTarget?.deviceId && hostSockets.has(dispatchTarget.deviceId)) {
+    try {
+      await emitHostCommand(dispatchTarget.deviceId, "stop_container", {
+        name: session.container_name || `computex_session_${session.id}`,
+      });
+    } catch (err) {
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.inactivity.stop_container.failed"
+      );
+    }
+  }
+
+  await insertAuditLog({
+    eventType: "session.auto_stop.inactive",
+    actorUserId: session.user_id,
+    targetType: "session",
+    targetId: session.id,
+    message: `Session ${session.id} auto-stopped after inactivity`,
+    metadata: {
+      sessionId: session.id,
+      hostId: session.host_id,
+      endedAt,
+      lastActivityAt: lastActivityAt || null,
+      inactivityLimitMs: SESSION_INACTIVITY_LIMIT_MS,
+    },
+  });
+
+  fastify.log.info(
+    {
+      sessionId: session.id,
+      userId: session.user_id,
+      endedAt,
+      lastActivityAt: lastActivityAt || null,
+      inactivityLimitMs: SESSION_INACTIVITY_LIMIT_MS,
+    },
+    "session.auto_stop.inactive"
+  );
+  return true;
+}
+
+async function enforceSessionInactivityPolicy() {
+  const runningSessions = await all(
+    "SELECT * FROM sessions WHERE environment_type = 'coding' AND status IN ('running', 'open')"
+  );
+  if (!runningSessions.length) {
+    return;
+  }
+
+  const cutoffMs = Date.now() - SESSION_INACTIVITY_LIMIT_MS;
+  for (const session of runningSessions) {
+    try {
+      const lastActivityAt = await getSessionLastActivityAt(session);
+      const lastActivityMs = parseTimestampMs(lastActivityAt || session.started_at);
+      if (!Number.isFinite(lastActivityMs)) {
+        continue;
+      }
+      if (lastActivityMs > cutoffMs) {
+        continue;
+      }
+      await autoStopSessionForInactivity(session, lastActivityAt || session.started_at);
+    } catch (err) {
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.inactivity.enforce.failed"
+      );
+    }
+  }
+}
+
+async function pathExists(targetPath) {
+  if (!targetPath) return false;
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveSessionWorkspacePath(session, userId) {
+  if (!session) return null;
+  if (session.workspace_path) {
+    return session.workspace_path;
+  }
+  if (!session.workspace_id) {
+    return null;
+  }
+  const workspace = await get("SELECT path FROM workspaces WHERE id = ? AND user_id = ?", [
+    session.workspace_id,
+    userId,
+  ]);
+  return workspace?.path || null;
+}
+
+async function resolveSessionBrowseRootPath(session, userId) {
+  const workspacePath = await resolveSessionWorkspacePath(session, userId);
+  if (!workspacePath) {
+    return { workspacePath: null, browseRootPath: null };
+  }
+  const projectPath = path.join(workspacePath, "project");
+  if (await pathExists(projectPath)) {
+    return {
+      workspacePath,
+      browseRootPath: projectPath,
+    };
+  }
+  return {
+    workspacePath,
+    browseRootPath: workspacePath,
+  };
+}
+
+async function listSessionFilesFromLocal(browseRootPath, { maxFiles = SESSION_FILE_MAX_ITEMS, maxDepth = SESSION_FILE_MAX_DEPTH } = {}) {
+  const rootPath = path.resolve(browseRootPath);
+  const queue = [{ fullPath: rootPath, relativePath: "", depth: 0 }];
+  const files = [];
+  let truncated = false;
+
+  while (queue.length > 0 && files.length < maxFiles) {
+    const current = queue.shift();
+    let entries = [];
+    try {
+      entries = await fs.readdir(current.fullPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+      const relativePath = current.relativePath
+        ? `${current.relativePath}/${entry.name}`
+        : entry.name;
+      const nextPath = path.resolve(current.fullPath, entry.name);
+      if (!isPathInsideRoot(rootPath, nextPath)) {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        if (current.depth < maxDepth) {
+          queue.push({
+            fullPath: nextPath,
+            relativePath,
+            depth: current.depth + 1,
+          });
+        }
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+
+      let stat = null;
+      try {
+        stat = await fs.stat(nextPath);
+      } catch {
+        stat = null;
+      }
+      if (!stat?.isFile()) {
+        continue;
+      }
+
+      files.push({
+        path: relativePath.replace(/\\/g, "/"),
+        size: Number(stat.size || 0),
+        created_at: stat.birthtime ? stat.birthtime.toISOString() : null,
+        modified_at: stat.mtime ? stat.mtime.toISOString() : null,
+      });
+
+      if (files.length >= maxFiles) {
+        truncated = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    files,
+    truncated,
+    source: "local",
+    root_path: rootPath.replace(/\\/g, "/"),
+  };
+}
+
+async function readSessionFileFromLocal(
+  browseRootPath,
+  relativePath,
+  { maxBytes = SESSION_FILE_PREVIEW_BYTES } = {}
+) {
+  const normalizedRelativePath = normalizeRelativePath(relativePath);
+  if (!normalizedRelativePath) {
+    throw createStatusError(400, "Invalid file path");
+  }
+
+  const rootPath = path.resolve(browseRootPath);
+  const targetPath = path.resolve(rootPath, normalizedRelativePath);
+  if (!isPathInsideRoot(rootPath, targetPath)) {
+    throw createStatusError(400, "Invalid file path");
+  }
+
+  let stat = null;
+  try {
+    stat = await fs.stat(targetPath);
+  } catch {
+    stat = null;
+  }
+  if (!stat?.isFile()) {
+    throw createStatusError(404, "File not found");
+  }
+
+  const fileHandle = await fs.open(targetPath, "r");
+  try {
+    const previewReadLimit = Math.max(1, maxBytes + 1);
+    const bytesToRead = Math.min(Number(stat.size || 0), previewReadLimit);
+    const readBuffer = Buffer.alloc(bytesToRead || 1);
+    const { bytesRead } = await fileHandle.read(readBuffer, 0, bytesToRead || 1, 0);
+    const previewLength = Math.min(bytesRead, maxBytes);
+    const previewBuffer = readBuffer.subarray(0, previewLength);
+    const isBinary = previewBuffer.includes(0);
+    const truncated = Number(stat.size || 0) > maxBytes || bytesRead > maxBytes;
+
+    return {
+      path: normalizedRelativePath,
+      size: Number(stat.size || 0),
+      created_at: stat.birthtime ? stat.birthtime.toISOString() : null,
+      modified_at: stat.mtime ? stat.mtime.toISOString() : null,
+      binary: isBinary,
+      truncated,
+      content: isBinary ? null : previewBuffer.toString("utf8"),
+      source: "local",
+      root_path: rootPath.replace(/\\/g, "/"),
+    };
+  } finally {
+    await fileHandle.close();
+  }
+}
+
+async function listSessionFilesFromHost(
+  session,
+  workspacePath,
+  { maxFiles = SESSION_FILE_MAX_ITEMS, maxDepth = SESSION_FILE_MAX_DEPTH } = {}
+) {
+  const dispatchTarget = await getSessionDispatchTarget(session);
+  if (!dispatchTarget?.deviceId || !hostSockets.has(dispatchTarget.deviceId)) {
+    throw new Error("Session host is not connected");
+  }
+
+  const response = await emitHostCommand(
+    dispatchTarget.deviceId,
+    "list_workspace_files",
+    {
+      workspacePath,
+      maxFiles,
+      maxDepth,
+    },
+    45000
+  );
+
+  return {
+    files: Array.isArray(response?.files) ? response.files : [],
+    truncated: Boolean(response?.truncated),
+    source: "host",
+    root_path: response?.root_path || workspacePath,
+  };
+}
+
+async function readSessionFileFromHost(
+  session,
+  workspacePath,
+  relativePath,
+  { maxBytes = SESSION_FILE_PREVIEW_BYTES } = {}
+) {
+  const normalizedRelativePath = normalizeRelativePath(relativePath);
+  if (!normalizedRelativePath) {
+    throw createStatusError(400, "Invalid file path");
+  }
+
+  const dispatchTarget = await getSessionDispatchTarget(session);
+  if (!dispatchTarget?.deviceId || !hostSockets.has(dispatchTarget.deviceId)) {
+    throw createStatusError(503, "Session host is not connected");
+  }
+
+  const response = await emitHostCommand(
+    dispatchTarget.deviceId,
+    "read_workspace_file",
+    {
+      workspacePath,
+      relativePath: normalizedRelativePath,
+      maxBytes,
+    },
+    45000
+  );
+
+  return {
+    path: response?.path || normalizedRelativePath,
+    size: Number(response?.size || 0),
+    created_at: response?.created_at || null,
+    modified_at: response?.modified_at || null,
+    binary: Boolean(response?.binary),
+    truncated: Boolean(response?.truncated),
+    content: response?.content ?? null,
+    source: "host",
+    root_path: response?.root_path || workspacePath,
+  };
+}
+
+async function listSessionFiles(session, userId) {
+  const { workspacePath, browseRootPath } = await resolveSessionBrowseRootPath(session, userId);
+  if (!workspacePath || !browseRootPath) {
+    return {
+      files: [],
+      truncated: false,
+      source: "none",
+      root_path: null,
+      missing_workspace: true,
+    };
+  }
+
+  if (await pathExists(browseRootPath)) {
+    try {
+      const localListing = await listSessionFilesFromLocal(browseRootPath);
+      return {
+        ...localListing,
+        files: filterSessionFilesForUser(session, localListing.files),
+      };
+    } catch (err) {
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.files.local_list.failed"
+      );
+    }
+  }
+
+  try {
+    const hostListing = await listSessionFilesFromHost(session, workspacePath);
+    return {
+      ...hostListing,
+      files: filterSessionFilesForUser(session, hostListing.files),
+    };
+  } catch (err) {
+    fastify.log.warn(
+      { sessionId: session.id, err: err?.message || err },
+      "session.files.host_list.failed"
+    );
+    return {
+      files: [],
+      truncated: false,
+      source: "unavailable",
+      root_path: browseRootPath.replace(/\\/g, "/"),
+      missing_workspace: false,
+    };
+  }
+}
+
+async function readSessionFile(session, userId, relativePath) {
+  const { workspacePath, browseRootPath } = await resolveSessionBrowseRootPath(session, userId);
+  if (!workspacePath || !browseRootPath) {
+    throw createStatusError(404, "Session workspace not found");
+  }
+
+  if (await pathExists(browseRootPath)) {
+    try {
+      const localFile = await readSessionFileFromLocal(browseRootPath, relativePath);
+      if (!isSessionOwnedUserFile(session, localFile)) {
+        throw createStatusError(404, "File not found");
+      }
+      return localFile;
+    } catch (err) {
+      if (err?.statusCode) {
+        throw err;
+      }
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.file.local_read.failed"
+      );
+    }
+  }
+
+  try {
+    const hostFile = await readSessionFileFromHost(session, workspacePath, relativePath);
+    if (!isSessionOwnedUserFile(session, hostFile)) {
+      throw createStatusError(404, "File not found");
+    }
+    return hostFile;
+  } catch (err) {
+    if (err?.statusCode) {
+      throw err;
+    }
+    throw createStatusError(404, err?.message || "File not found");
+  }
+}
+
+async function isSessionEmptyForCleanup(session) {
+  const userId = session?.user_id;
+  if (!userId) return false;
+  const { workspacePath, browseRootPath } = await resolveSessionBrowseRootPath(session, userId);
+  if (!workspacePath || !browseRootPath) {
+    return true;
+  }
+
+  if (await pathExists(browseRootPath)) {
+    try {
+      const localListing = await listSessionFilesFromLocal(browseRootPath, {
+        maxFiles: 1,
+        maxDepth: SESSION_FILE_MAX_DEPTH,
+      });
+      return localListing.files.length === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const remoteListing = await listSessionFilesFromHost(session, workspacePath, {
+      maxFiles: 1,
+      maxDepth: SESSION_FILE_MAX_DEPTH,
+    });
+    return remoteListing.files.length === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function cleanupEmptySessions() {
+  const cutoffIso = new Date(Date.now() - EMPTY_SESSION_RETENTION_MS).toISOString();
+  const candidates = await all(
+    `SELECT *
+     FROM sessions
+     WHERE environment_type = 'coding'
+       AND status IN ('stopped', 'failed', 'completed', 'idle')
+       AND COALESCE(ended_at, started_at) <= ?`,
+    [cutoffIso]
+  );
+
+  let deletedCount = 0;
+  for (const session of candidates) {
+    try {
+      const empty = await isSessionEmptyForCleanup(session);
+      if (!empty) {
+        continue;
+      }
+      await run("DELETE FROM sessions WHERE id = ?", [session.id]);
+      deletedCount += 1;
+    } catch (err) {
+      fastify.log.warn(
+        { sessionId: session.id, err: err?.message || err },
+        "session.cleanup.failed"
+      );
+    }
+  }
+
+  if (deletedCount > 0) {
+    fastify.log.info({ deletedCount }, "session.cleanup.empty_sessions.deleted");
+  }
+}
+
 
 function sanitizePathSegment(input) {
   return String(input || "")
@@ -1273,7 +1971,7 @@ async function finalizePreparedSessionLaunch(prepared, { persistExisting = false
       baseSession.image = launchResult.image || baseSession.image;
       baseSession.access_url = launchResult.access_url || null;
       baseSession.access_password = launchResult.password || generatedPassword;
-      if (!skipWorkspace) {
+      if (launchResult.workspace_path) {
         baseSession.workspace_path = launchResult.workspace_path || baseSession.workspace_path;
       }
     }
@@ -2640,6 +3338,119 @@ fastify.get("/api/sessions/:id", { preHandler: authGuard }, async (request, repl
   });
 });
 
+fastify.get("/api/sessions/:id/files", { preHandler: authGuard }, async (request, reply) => {
+  const { id } = request.params;
+  const userId = request.user?.sub;
+  const session = await get("SELECT * FROM sessions WHERE id = ? AND user_id = ?", [id, userId]);
+  if (!session) {
+    return reply.code(404).send({ message: "Session not found" });
+  }
+
+  const listing = await listSessionFiles(session, userId);
+  return reply.send({
+    session: {
+      ...session,
+      selected_tools: safeJsonParse(session.selected_tools, []),
+    },
+    files: listing.files || [],
+    truncated: Boolean(listing.truncated),
+    source: listing.source || "none",
+    root_path: listing.root_path || null,
+    missing_workspace: Boolean(listing.missing_workspace),
+    has_files: Array.isArray(listing.files) && listing.files.length > 0,
+  });
+});
+
+fastify.get("/api/sessions/:id/files/content", { preHandler: authGuard }, async (request, reply) => {
+  const { id } = request.params;
+  const userId = request.user?.sub;
+  const rawRelativePath = request.query?.path || "";
+  const relativePath = normalizeRelativePath(rawRelativePath);
+  if (!relativePath) {
+    return reply.code(400).send({ message: "Query parameter 'path' is required" });
+  }
+
+  const session = await get("SELECT * FROM sessions WHERE id = ? AND user_id = ?", [id, userId]);
+  if (!session) {
+    return reply.code(404).send({ message: "Session not found" });
+  }
+
+  try {
+    const file = await readSessionFile(session, userId, relativePath);
+    return reply.send({
+      session: {
+        id: session.id,
+        title: session.title,
+        status: session.status,
+      },
+      file,
+    });
+  } catch (err) {
+    const statusCode = Number(err?.statusCode || 500);
+    return reply.code(statusCode).send({ message: err?.message || "Failed to read file" });
+  }
+});
+
+fastify.post("/api/sessions/:id/reopen", { preHandler: authGuard }, async (request, reply) => {
+  const { id } = request.params;
+  const userId = request.user?.sub;
+  const payload = request.body || {};
+  const session = await get("SELECT * FROM sessions WHERE id = ? AND user_id = ?", [id, userId]);
+  if (!session) {
+    return reply.code(404).send({ message: "Session not found" });
+  }
+  if ((session.environment_type || "coding") !== "coding") {
+    return reply.code(409).send({ message: "Only coding sessions can be reopened" });
+  }
+
+  const parsedTools = sanitizeWorkspaceTools(safeJsonParse(session.selected_tools, []));
+  const fallbackPresetKey = session.preset_key || payload.preset_key || payload.presetKey || "python";
+  let workspaceId = session.workspace_id || null;
+
+  if (!workspaceId && session.workspace_path) {
+    let workspace = await get(
+      "SELECT * FROM workspaces WHERE user_id = ? AND type = 'coding' AND path = ? LIMIT 1",
+      [userId, session.workspace_path]
+    );
+    if (!workspace) {
+      workspace = await createWorkspaceForUser(userId, {
+        type: "coding",
+        name: session.title || "Code Server Session",
+        path: session.workspace_path,
+        preset_key: fallbackPresetKey,
+        tools: parsedTools,
+        image_key: session.image || null,
+      });
+    }
+    workspaceId = workspace?.id || null;
+    if (workspaceId) {
+      await run("UPDATE sessions SET workspace_id = ? WHERE id = ?", [workspaceId, session.id]);
+    }
+  }
+
+  const launchBody = {
+    ...payload,
+    environment: "coding",
+    workspace_name: session.title || "Code Server Session",
+    preset_key: fallbackPresetKey,
+    tools: parsedTools.length ? parsedTools : ["python", "git"],
+    image: session.image || payload.image || payload.image_key || payload.imageKey || DEFAULT_PYTHON_INTERPRETER_IMAGE,
+    async_launch:
+      payload.async_launch === undefined && payload.asyncLaunch === undefined
+        ? true
+        : Boolean(payload.async_launch ?? payload.asyncLaunch),
+  };
+
+  if (workspaceId) {
+    launchBody.workspace_id = workspaceId;
+  } else {
+    launchBody.skip_workspace = true;
+    launchBody.defer_workspace_save = true;
+  }
+
+  return createSessionLaunch(request, reply, launchBody);
+});
+
 fastify.get("/api/workspaces", { preHandler: authGuard }, async (request, reply) => {
   const userId = request.user?.sub;
   return reply.send({ workspaces: await getUserWorkspaces(userId) });
@@ -3323,24 +4134,28 @@ io.on("connection", (socket) => {
   });
 });
 
+cleanupEmptySessions().catch((err) => {
+  fastify.log.warn({ err: err?.message || err }, "session.cleanup.initial.failed");
+});
+setInterval(() => {
+  cleanupEmptySessions().catch((err) => {
+    fastify.log.warn({ err: err?.message || err }, "session.cleanup.interval.failed");
+  });
+}, EMPTY_SESSION_CLEANUP_INTERVAL_MS);
+
+enforceSessionInactivityPolicy().catch((err) => {
+  fastify.log.warn({ err: err?.message || err }, "session.inactivity.initial.failed");
+});
+setInterval(() => {
+  enforceSessionInactivityPolicy().catch((err) => {
+    fastify.log.warn({ err: err?.message || err }, "session.inactivity.interval.failed");
+  });
+}, SESSION_INACTIVITY_SWEEP_INTERVAL_MS);
+
 fastify.log.info(`ComputeX backend build ${new Date().toISOString()} | agent-link-logging`);
 fastify.log.info("Agent link logging enabled");
 await fastify.listen({ port: PORT, host: "0.0.0.0" });
 fastify.log.info(`ComputeX backend listening on ${PORT}`);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
