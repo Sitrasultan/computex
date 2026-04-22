@@ -1,0 +1,4 @@
+docker>=7.1.0
+psutil>=6.0.0
+python-socketio[client]>=5.11.0
+pyinstaller>=6.11.0

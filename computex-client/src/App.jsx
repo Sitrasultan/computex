@@ -7,6 +7,9 @@ import SessionLaunchPage from "./pages/SessionLaunchPage";
 import SessionFilesPage from "./pages/SessionFilesPage";
 import WorkspaceManagerPage from "./pages/WorkspaceManagerPage";
 import WorkspaceToolsPage from "./pages/WorkspaceToolsPage";
+import DocsGettingStartedPage from "./pages/DocsGettingStartedPage";
+import DocsHostInstallationPage from "./pages/DocsHostInstallationPage";
+import DocsTroubleshootingPage from "./pages/DocsTroubleshootingPage";
 
 export default function App() {
   return (
@@ -18,6 +21,9 @@ export default function App() {
       <Route path="/workspaces" element={<WorkspaceManagerPage />} />
       <Route path="/workspaces/new" element={<WorkspaceToolsPage />} />
       <Route path="/workspaces/:id/tools" element={<WorkspaceToolsPage />} />
+      <Route path="/docs/getting-started" element={<DocsGettingStartedPage />} />
+      <Route path="/docs/host-installation" element={<DocsHostInstallationPage />} />
+      <Route path="/docs/troubleshooting" element={<DocsTroubleshootingPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/host/register" element={<HostRegister />} />
       <Route path="*" element={<Navigate to="/" replace />} />

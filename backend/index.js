@@ -75,6 +75,9 @@ const NO_AVAILABLE_HOST_MESSAGE =
 const NO_HEALTHY_HOST_MESSAGE =
   "All available hosts are currently above safe load limits. Please retry in a moment.";
 const WORKSPACE_TOOL_LIMIT = 5;
+const BILLING_MINUTES_PER_CREDIT = 60;
+const BILLING_ETB_PER_CREDIT = 100;
+const BILLING_ETB_PER_MINUTE = BILLING_ETB_PER_CREDIT / BILLING_MINUTES_PER_CREDIT;
 const WORKSPACE_TOOL_CATALOG = [
   { id: "python", label: "Python", logo: "PY" },
   { id: "node", label: "Node.js", logo: "ND" },
@@ -2450,15 +2453,67 @@ async function authGuard(request, reply) {
 
 async function ensureCredits(userId) {
   const existing = await get("SELECT * FROM credits WHERE user_id = ?", [userId]);
-  if (existing) return existing;
+  if (existing) {
+    // Backfill older credit rows that used credit units instead of minutes.
+    if (existing.monthly_limit <= 120 && existing.remaining <= 120) {
+      const migrated = {
+        ...existing,
+        used: Math.max(0, Number(existing.used) || 0) * BILLING_MINUTES_PER_CREDIT,
+        remaining: Math.max(0, Number(existing.remaining) || 0) * BILLING_MINUTES_PER_CREDIT,
+        monthly_limit: 0,
+      };
+      migrated.balance = Math.max(0, Math.ceil(migrated.remaining / BILLING_MINUTES_PER_CREDIT));
 
-  const credits = { user_id: userId, balance: 20, used: 4, monthly_limit: 50, remaining: 46 };
+      await run(
+        "UPDATE credits SET balance = ?, used = ?, monthly_limit = ?, remaining = ? WHERE user_id = ?",
+        [migrated.balance, migrated.used, migrated.monthly_limit, migrated.remaining, userId]
+      );
+      return migrated;
+    }
+
+    const normalizedRemaining = Math.max(0, Number(existing.remaining) || 0);
+    const normalizedBalance = Math.max(0, Math.ceil(normalizedRemaining / BILLING_MINUTES_PER_CREDIT));
+    if (existing.balance !== normalizedBalance || existing.monthly_limit !== 0) {
+      await run(
+        "UPDATE credits SET balance = ?, monthly_limit = ? WHERE user_id = ?",
+        [normalizedBalance, 0, userId]
+      );
+      return {
+        ...existing,
+        balance: normalizedBalance,
+        monthly_limit: 0,
+        remaining: normalizedRemaining,
+      };
+    }
+
+    return { ...existing, remaining: normalizedRemaining, monthly_limit: 0 };
+  }
+
+  const startingCredits = 20;
+  const startingMinutes = startingCredits * BILLING_MINUTES_PER_CREDIT;
+  const credits = {
+    user_id: userId,
+    balance: startingCredits,
+    used: 0,
+    monthly_limit: 0,
+    remaining: startingMinutes,
+  };
   await run(
     "INSERT INTO credits (user_id, balance, used, monthly_limit, remaining) VALUES (?, ?, ?, ?, ?)",
     [credits.user_id, credits.balance, credits.used, credits.monthly_limit, credits.remaining]
   );
 
   return credits;
+}
+
+function getSessionActiveMinutes(session, endedAtIso) {
+  const startedAt = session?.started_at ? new Date(session.started_at) : null;
+  const endedAt = endedAtIso ? new Date(endedAtIso) : new Date();
+  if (!startedAt || Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())) {
+    return 1;
+  }
+  const durationMs = Math.max(0, endedAt.getTime() - startedAt.getTime());
+  return Math.max(1, Math.ceil(durationMs / 60000));
 }
 
 function generateEmailCode() {
@@ -3619,6 +3674,16 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
   if (!session) {
     return reply.code(404).send({ message: "Session not found" });
   }
+  if (session.status === "stopped" || session.status === "completed" || session.ended_at) {
+    const credits = await ensureCredits(userId);
+    return reply.send({
+      message: "Session already stopped",
+      session,
+      credits,
+      billed_minutes: 0,
+      billed_etb: 0,
+    });
+  }
 
   const endedAt = new Date().toISOString();
   await run("UPDATE sessions SET status = ?, ended_at = ? WHERE id = ?", [
@@ -3656,13 +3721,15 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
     });
   }
 
+  const billedMinutes = getSessionActiveMinutes(session, endedAt);
+  const billedEtb = Number((billedMinutes * BILLING_ETB_PER_MINUTE).toFixed(2));
   const credits = await ensureCredits(userId);
   const updatedCredits = {
     ...credits,
-    used: credits.used + 1,
-    balance: credits.balance + 1,
-    remaining: Math.max(0, credits.monthly_limit - (credits.used + 1)),
+    used: (Number(credits.used) || 0) + billedMinutes,
   };
+  updatedCredits.remaining = Math.max(0, (Number(credits.remaining) || 0) - billedMinutes);
+  updatedCredits.balance = Math.max(0, Math.ceil(updatedCredits.remaining / BILLING_MINUTES_PER_CREDIT));
 
   await run(
     "UPDATE credits SET balance = ?, used = ?, remaining = ? WHERE user_id = ?",
@@ -3683,6 +3750,8 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
     session: { ...session, status: "stopped", ended_at: endedAt },
     credits: updatedCredits,
     workspace: createdWorkspace,
+    billed_minutes: billedMinutes,
+    billed_etb: billedEtb,
   });
 });
 
@@ -4156,6 +4225,3 @@ fastify.log.info(`ComputeX backend build ${new Date().toISOString()} | agent-lin
 fastify.log.info("Agent link logging enabled");
 await fastify.listen({ port: PORT, host: "0.0.0.0" });
 fastify.log.info(`ComputeX backend listening on ${PORT}`);
-
-
-

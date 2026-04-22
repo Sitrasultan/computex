@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./dashboard.css";
 import { api, requestWithFallback } from "../utils/api";
 import { createAppSocket, emitSessionStart } from "../utils/socket";
@@ -9,6 +9,17 @@ import SessionComponent from "../components/SessionComponent";
 import ContainerCard from "../components/ContainerCard";
 
 const SESSION_POLL_REQUEST_TIMEOUT_MS = 1500;
+const MINUTES_PER_CREDIT = 60;
+const ETB_PER_CREDIT = 100;
+const ETB_PER_MINUTE = ETB_PER_CREDIT / MINUTES_PER_CREDIT;
+
+const formatMinutes = (minutes) => {
+  const total = Math.max(0, Number(minutes) || 0);
+  const hrs = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hrs === 0) return `${mins}m`;
+  return `${hrs}h ${mins}m`;
+};
 
 
 // ---------- Icons ----------
@@ -91,42 +102,37 @@ function Sidebar({ open, onClose, theme }) {
           </div>
 
           <nav className="flex-1 flex flex-col gap-1.5 mt-4">
-            {[
-              { key: "dashboard", label: "Dashboard", icon: <IconContainer /> },
-              { key: "sessions", label: "Sessions", icon: <IconPlay /> },
-              { key: "hosts", label: "Hosts", icon: <IconContainer /> },
-              { key: "billing", label: "Billing", icon: <IconCredit /> },
-            ].map((it) => {
-              const isActive = it.key === "sessions";
-              return (
-                <button
-                  key={it.key}
-                  className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition ${
-                    isDark
-                      ? isActive
-                        ? "bg-[#0d1021] border border-white/5"
-                        : "hover:bg-white/5"
-                      : isActive
-                      ? "bg-slate-100 border border-slate-200"
-                      : "hover:bg-slate-50"
-                  }`}
-                >
-                  <div
-                    className={`p-1.5 rounded-md w-8 h-8 flex items-center justify-center ${
-                      isDark ? "bg-white/5 text-sky-400" : "bg-slate-100 text-sky-500"
-                    }`}
-                  >
-                    {it.icon}
-                  </div>
-                  <span className="truncate">{it.label}</span>
-                </button>
-              );
-            })}
+            <Link
+              to="/dashboard"
+              className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition ${
+                isDark ? "bg-[#0d1021] border border-white/5" : "bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <div
+                className={`p-1.5 rounded-md w-8 h-8 flex items-center justify-center ${
+                  isDark ? "bg-white/5 text-sky-400" : "bg-slate-100 text-sky-500"
+                }`}
+              >
+                <IconContainer />
+              </div>
+              <span className="truncate">Dashboard</span>
+            </Link>
+            <Link
+              to="/docs/getting-started"
+              className={`group w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition ${
+                isDark ? "hover:bg-white/5" : "hover:bg-slate-50"
+              }`}
+            >
+              <div
+                className={`p-1.5 rounded-md w-8 h-8 flex items-center justify-center ${
+                  isDark ? "bg-white/5 text-sky-400" : "bg-slate-100 text-sky-500"
+                }`}
+              >
+                <IconCredit />
+              </div>
+              <span className="truncate">Support & Docs</span>
+            </Link>
           </nav>
-
-          <div className={`mt-auto text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            v0.1 • prototype
-          </div>
         </div>
       </aside>
     </>
@@ -150,17 +156,6 @@ function Topbar({ onMenuClick, theme, toggleTheme }) {
         >
           ☰
         </button>
-
-        <div className="flex-1 min-w-0">
-          <input
-            placeholder="search sessions, hosts, container"
-            className={`w-full text-sm px-3 py-2 rounded-2xl border focus:outline-none focus:ring-2 ${
-              isDark
-                ? "bg-[#020921] text-slate-100 placeholder:text-slate-500 border-sky-500/40 focus:ring-sky-500/60"
-                : "bg-slate-50 text-slate-800 placeholder:text-slate-400 border-slate-300 focus:ring-sky-500/40"
-            }`}
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -268,37 +263,67 @@ function HostsStatusCard({ hosts, theme }) {
 }
 
 function CreditsCard({ credits }) {
- const percent =
-  credits.monthly_limit > 0
-    ? Math.min(
-        100,
-        Math.round((credits.used / credits.monthly_limit) * 100)
-      )
-    : 0;
+  const used = Number(credits?.used) || 0;
+  const remaining = Math.max(0, Number(credits?.remaining) || 0);
+  const trackedTotal = used + remaining;
+  const percent = trackedTotal > 0 ? Math.min(100, Math.round((used / trackedTotal) * 100)) : 0;
+  const availableCredits = Number((remaining / MINUTES_PER_CREDIT).toFixed(2));
+  const spentEtb = Number((used * ETB_PER_MINUTE).toFixed(2));
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative rounded-2xl p-5 bg-gradient-to-r from-blue-900 to-purple-900/80 shadow-lg overflow-hidden"
+      className="relative rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-sky-900 via-indigo-900 to-blue-950 shadow-2xl overflow-hidden border border-white/10"
     >
       <div className="absolute -right-20 -top-10 opacity-20 w-72 h-72 rounded-full bg-gradient-to-tr from-white/10 to-white/5 blur-3xl"></div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-lg bg-white/6">
-            <IconCredit className="w-8 h-8 text-yellow-300" />
+      <div className="absolute -left-16 -bottom-24 opacity-20 w-72 h-72 rounded-full bg-sky-300/30 blur-3xl"></div>
+      <div className="relative flex flex-col gap-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-white/10">
+              <IconCredit className="w-8 h-8 text-yellow-300" />
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-300">Billing Overview</div>
+              <div className="mt-1 text-3xl font-bold text-white">{formatMinutes(remaining)}</div>
+              <div className="text-xs text-slate-300">Time left ({availableCredits} credits)</div>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-300">Credits</div>
-            <div className="text-2xl font-bold text-white">{credits.balance}</div>
-            <div className="text-xs text-slate-400">
-  Used this month: {credits.used} / {credits.monthly_limit}
-</div>
-
+          <div className="text-right">
+            <div className="text-xs text-slate-300">Rate</div>
+            <div className="text-sm font-semibold text-emerald-200">1 credit = 60 min</div>
+            <div className="text-sm font-semibold text-emerald-200">100 ETB / credit</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center">
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="rounded-2xl bg-white/10 p-3 border border-white/10">
+            <div className="text-slate-300">Used Runtime</div>
+            <div className="mt-1 text-base font-semibold text-white">{formatMinutes(used)}</div>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3 border border-white/10">
+            <div className="text-slate-300">Spent</div>
+            <div className="mt-1 text-base font-semibold text-white">{spentEtb} ETB</div>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3 border border-white/10">
+            <div className="text-slate-300">Remaining Time</div>
+            <div className="mt-1 text-base font-semibold text-white">{formatMinutes(remaining)}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/6">
+              <IconCredit className="w-5 h-5 text-sky-200" />
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-300">Usage Progress</div>
+            <div className="text-xs text-slate-400">Used: {formatMinutes(used)} | Remaining: {formatMinutes(remaining)}</div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center">
             <svg viewBox="0 0 36 36" className="w-20 h-20">
               <defs>
                 <linearGradient id="g" x1="0%" x2="100%">
@@ -331,18 +356,55 @@ function CreditsCard({ credits }) {
                 {percent}%
               </text>
             </svg>
-            <div className="text-xs text-slate-300 mt-2">of monthly limit</div>
+            <div className="text-xs text-slate-300 mt-2">used vs available</div>
           </div>
-        <div className="text-xs text-slate-400">
-  Remaining: {credits.remaining}
-</div>
-
-          <div>
-            <button className="px-4 py-2 bg-white/6 rounded-lg hover:scale-105 transition transform">Top up</button>
+            <div>
+              <button className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition">Top up</button>
+            </div>
           </div>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function OverviewBanner({ credits, sessions = [], theme }) {
+  const isDark = theme === "dark";
+  const runningCount = (sessions || []).filter((s) => s.status === "running" || s.status === "open").length;
+  const usedMinutes = Number(credits?.used) || 0;
+  const remainingMinutes = Math.max(0, Number(credits?.remaining) || 0);
+  const spentEtb = Number((usedMinutes * ETB_PER_MINUTE).toFixed(2));
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-3xl p-5 sm:p-6 border ${
+        isDark
+          ? "bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 border-white/10"
+          : "bg-gradient-to-r from-sky-100 via-indigo-50 to-cyan-100 border-sky-200/70"
+      }`}
+    >
+      <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-3xl ${isDark ? "bg-cyan-400/10" : "bg-cyan-300/30"}`}></div>
+      <div className="relative">
+        <h2 className={`text-xl sm:text-2xl font-bold ${isDark ? "text-slate-100" : "text-slate-900"}`}>Compute Snapshot</h2>
+        <p className={`text-xs sm:text-sm mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+          Minute-based billing is live: 60 minutes per credit, 100 ETB per credit.
+        </p>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={`rounded-2xl p-3 border ${isDark ? "bg-white/5 border-white/10 text-slate-100" : "bg-white/80 border-sky-200 text-slate-900"}`}>
+            <div className="text-xs opacity-80">Active Sessions</div>
+            <div className="text-lg font-semibold mt-1">{runningCount}</div>
+          </div>
+          <div className={`rounded-2xl p-3 border ${isDark ? "bg-white/5 border-white/10 text-slate-100" : "bg-white/80 border-sky-200 text-slate-900"}`}>
+            <div className="text-xs opacity-80">Remaining Time</div>
+            <div className="text-lg font-semibold mt-1">{formatMinutes(remainingMinutes)}</div>
+          </div>
+          <div className={`rounded-2xl p-3 border ${isDark ? "bg-white/5 border-white/10 text-slate-100" : "bg-white/80 border-sky-200 text-slate-900"}`}>
+            <div className="text-xs opacity-80">Spend (ETB)</div>
+            <div className="text-lg font-semibold mt-1">{spentEtb}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -695,7 +757,7 @@ function StartSessionButton() {
 // ---------- MAIN DASHBOARD ----------
 export default function ComputeXDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
   const openedLaunchSessionRef = useRef(new Set());
 
   const [credits, setCredits] = useState({
@@ -808,8 +870,9 @@ useEffect(() => {
             setCredits(res.data.credits);
         }
 
-        // Optional: show success notification
-        alert(res.data.message);
+        const billedMinutes = Number(res.data?.billed_minutes || 0);
+        const billedEtb = Number(res.data?.billed_etb || 0);
+        alert(`${res.data.message}. Billed: ${billedMinutes} minute(s) (${billedEtb} ETB).`);
 
     } catch (error) {
         console.error(error);
@@ -952,7 +1015,7 @@ useEffect(() => {
 
   // Load saved theme
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark";
+    const savedTheme = localStorage.getItem("theme") || "light";
     setTheme(savedTheme);
   }, []);
 
@@ -980,9 +1043,12 @@ useEffect(() => {
             </div>
           )}
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-6 scrollbar-thin scrollbar-thumb-purple-400/50 scrollbar-track-transparent">
+            <div className="max-w-7xl mx-auto w-full px-4">
+              <OverviewBanner credits={credits} sessions={sessions} theme={theme} />
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-6 max-w-7xl mx-auto w-full px-4">
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5">
                   <CreditsCard credits={credits} />
                   <div
                     className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between h-full shadow-[0_18px_45px_rgba(0,0,0,0.55)] ${
@@ -991,43 +1057,12 @@ useEffect(() => {
                         : "bg-gradient-to-br from-purple-100/70 to-indigo-100/70 backdrop-blur-md border border-purple-200/50"
                     }`}
                   >
-                    <div>
-                      <h3 className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>Quick actions</h3>
-                      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"} mt-1`}>Common workflows at your fingertips</p>
-                    </div>
                     <div className="mt-4 grid grid-cols-1 gap-3">
                      <SessionComponent />
-
-
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <button
-                          className={`flex-1 min-w-[120px] px-4 py-2 rounded-xl ${
-                            isDark ? "bg-slate-700/50 text-slate-200 hover:bg-slate-700/70" : "bg-purple-200/80 text-purple-800 hover:bg-purple-300/80"
-                          }`}
-                        >
-                          View Hosts
-                        </button>
-                        <button
-                          className={`flex-1 min-w-[120px] px-4 py-2 rounded-xl ${
-                            isDark ? "bg-slate-700/50 text-slate-200 hover:bg-slate-700/70" : "bg-indigo-200/80 text-indigo-800 hover:bg-indigo-300/80"
-                          }`}
-                        >
-                          Billing
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>
                 <SessionsCard sessions={sessions} theme={theme}  stopSession={stopSession} loadingSession={loadingSession}  timers={timers}  />
-                <WorkspacesCard
-                  workspaces={workspaces}
-                  theme={theme}
-                  onResume={resumeWorkspace}
-                  onDelete={deleteWorkspace}
-                  busyWorkspaceId={busyWorkspaceId}
-                  deletingWorkspaceId={deletingWorkspaceId}
-                />
-                <ActiveContainers containers={containers} theme={theme} refreshContainers={fetchContainers} />
               </div>
 
               <div className="space-y-6">
@@ -1037,26 +1072,12 @@ useEffect(() => {
                     isDark ? "bg-slate-800/50 backdrop-blur-md border border-white/10" : "bg-gradient-to-br from-purple-50/90 to-indigo-50/90 backdrop-blur-md border border-purple-100/60"
                   }`}
                 >
-                  <h3 className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>Usage Insights</h3>
-                  <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"} mt-2`}>Mini charts and KPI placeholders</p>
-                  <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
-                    <div className={`rounded-xl p-3 ${isDark ? "bg-slate-700/40" : "bg-purple-100/60"}`}>Sparkline / chart placeholder</div>
-                    <HostsStatusCard hosts={hosts} theme={theme} />
-                    <div className={`rounded-xl p-3 ${isDark ? "bg-slate-700/40" : "bg-purple-100/60"}`}>Recent logs</div>
-                  </div>
-                </div>
-
-                <div
-                  className={`rounded-3xl p-4 sm:p-5 shadow-[0_18px_45px_rgba(0,0,0,0.55)] ${
-                    isDark ? "bg-slate-800/50 backdrop-blur-md border border-white/10" : "bg-gradient-to-br from-purple-50/90 to-indigo-50/90 backdrop-blur-md border border-purple-100/60"
-                  }`}
-                >
                   <h3 className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>Support & Docs</h3>
                   <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"} mt-2`}>Quick links for onboarding and troubleshooting</p>
                   <ul className={`mt-3 text-sm space-y-2 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                    <li>• Getting started guide</li>
-                    <li>• Host agent installation</li>
-                    <li>• Troubleshooting connectivity</li>
+                    <li><Link to="/docs/getting-started" className="hover:underline">Getting started guide</Link></li>
+                    <li><Link to="/docs/host-installation" className="hover:underline">Host agent installation</Link></li>
+                    <li><Link to="/docs/troubleshooting" className="hover:underline">Troubleshooting connectivity</Link></li>
                   </ul>
                 </div>
               </div>
@@ -1083,5 +1104,3 @@ useEffect(() => {
     </div>
   );
 } 
-
-

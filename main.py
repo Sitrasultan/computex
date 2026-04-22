@@ -4,6 +4,7 @@ import platform
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -18,12 +19,18 @@ from docker_manager import DockerManager
 from host_bridge import HostBridge
 
 
+def _resource_path(relative_path: str) -> str:
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
 class ComputeXHostDashboard(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("ComputeX Host Agent")
         self.geometry("1380x860")
         self.minsize(1160, 760)
+        self._set_window_icon()
 
         self.colors = {
             "bg": "#07111F",
@@ -94,6 +101,15 @@ class ComputeXHostDashboard(tk.Tk):
 
         self._persist_machine_profile()
         self.after(80, self._start_launch_flow)
+
+    def _set_window_icon(self):
+        icon_path = _resource_path(os.path.join("assets", "computex.ico"))
+        if not os.path.exists(icon_path):
+            return
+        try:
+            self.iconbitmap(icon_path)
+        except Exception:
+            pass
 
     def _clear_root(self):
         self.unbind_all("<MouseWheel>")

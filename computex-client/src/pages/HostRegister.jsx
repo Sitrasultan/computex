@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "../components/ThemeToggle";
 import {
@@ -25,6 +25,8 @@ const steps = [
   },
 ];
 
+const HOST_APP_DEEP_LINK = "computexhost://open";
+
 export default function HostRegister() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -43,11 +45,24 @@ export default function HostRegister() {
   const [devEmailCode, setDevEmailCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [hostLaunchAttempted, setHostLaunchAttempted] = useState(false);
 
   const progress = useMemo(() => ((step + 1) / steps.length) * 100, [step]);
 
   const goNext = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
+  const openHostApp = () => {
+    if (typeof window === "undefined") return;
+    setHostLaunchAttempted(true);
+    window.location.assign(HOST_APP_DEEP_LINK);
+  };
+
+  useEffect(() => {
+    if (step === 1 && !hostLaunchAttempted) {
+      openHostApp();
+    }
+  }, [step, hostLaunchAttempted]);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -390,12 +405,15 @@ export default function HostRegister() {
                     >
                       <div className="rounded-xl border border-white/20 bg-white/70 dark:bg-slate-900/60 p-4">
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Download the ComputeX Host app and run the installer on the PC you want to register.
-                          After installation, sign in with the same email and password to link your machine.
+                          We are opening the ComputeX Host app on this device now. If it does not open, install the app
+                          first and then click the button below to launch it.
                         </p>
-                        <a href="#" className="primary-btn inline-block text-center mt-4">
-                          Download ComputeX Host (fake link)
-                        </a>
+                        <button onClick={openHostApp} className="primary-btn inline-block text-center mt-4" type="button">
+                          Open ComputeX Host App
+                        </button>
+                        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                          Deep link: {HOST_APP_DEEP_LINK}
+                        </p>
                       </div>
                       <div className="grid sm:grid-cols-3 gap-3">
                         <div className="p-3 rounded-xl border border-white/20 bg-white/70 dark:bg-slate-900/60">
@@ -429,20 +447,9 @@ export default function HostRegister() {
                       className="space-y-4"
                     >
                       <div className="rounded-xl border border-white/20 bg-white/70 dark:bg-slate-900/60 p-4">
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Your host is now registered. You can monitor health, earnings, and active sessions
-                          from the dashboard.
+                        <p className="text-sm text-gray-700 dark:text-gray-200 font-medium">
+                          Host registration is complete. You can close this page now.
                         </p>
-                        <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                          <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-800/70 border">
-                            <p className="text-xs text-gray-500">Status</p>
-                            <p className="font-semibold text-green-600">Awaiting first workload</p>
-                          </div>
-                          <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-800/70 border">
-                            <p className="text-xs text-gray-500">Next action</p>
-                            <p className="font-semibold text-gray-800 dark:text-gray-100">Keep the app online</p>
-                          </div>
-                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -450,18 +457,20 @@ export default function HostRegister() {
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={goBack}
-                  disabled={step === 0 || loading}
-                  className={`px-4 py-2 rounded-lg border text-sm ${
-                    step === 0 || loading
-                      ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-slate-800"
-                  }`}
-                  type="button"
-                >
-                  Back
-                </button>
+                {step < 2 && (
+                  <button
+                    onClick={goBack}
+                    disabled={step === 0 || loading}
+                    className={`px-4 py-2 rounded-lg border text-sm ${
+                      step === 0 || loading
+                        ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-slate-800"
+                    }`}
+                    type="button"
+                  >
+                    Back
+                  </button>
+                )}
 
                 {step === 0 && (
                   <button onClick={handleRegister} className="primary-btn" type="button" disabled={loading}>
@@ -475,11 +484,7 @@ export default function HostRegister() {
                   </button>
                 )}
 
-                {step === 2 && (
-                  <a href="/dashboard" className="primary-btn text-center">
-                    Go to dashboard
-                  </a>
-                )}
+                {step === 2 && <p className="text-sm text-gray-600 dark:text-gray-300">You can close this page now.</p>}
               </div>
             </div>
           </section>
@@ -492,3 +497,4 @@ export default function HostRegister() {
     </div>
   );
 }
+
