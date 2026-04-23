@@ -16,6 +16,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from code_server_image_manager import (
     get_coding_image_catalog,
+    is_java_ready_image,
+    is_node_ready_image,
+    is_php_ready_image,
     is_python_ready_image,
     resolve_build_context_for_image as resolve_managed_build_context,
 )
@@ -216,6 +219,109 @@ class DockerManager:
         except Exception as exc:
             return False, f"Start container failed: {exc}"
 
+    def verify_node_runtime(self, image: str = "computex-node-interpreter") -> Tuple[bool, str, Dict[str, Any]]:
+        if not self.ping():
+            return False, "Docker engine not available", {}
+
+        requested_image = (image or "").strip() or "computex-node-interpreter"
+        legacy_aliases = {
+            "computex-node": "computex-node-interpreter",
+        }
+        effective_image = legacy_aliases.get(requested_image, requested_image)
+
+        image_ok, image_msg = self.ensure_image(effective_image, force_rebuild=False)
+        if not image_ok:
+            return False, image_msg, {}
+
+        checks: List[Dict[str, Any]] = [
+            {"id": "node_version", "cmd": "node -v", "expect": "v"},
+            {"id": "npm_version", "cmd": "npm -v"},
+            {"id": "tsc_version", "cmd": "npx tsc -v", "expect": "Version"},
+            {
+                "id": "node_smoke",
+                "cmd": (
+                    "cd /home/coder/project && "
+                    "cat > app.js <<'EOF'\n"
+                    "console.log('Node OK');\n"
+                    "EOF\n"
+                    "node app.js"
+                ),
+                "expect": "Node OK",
+            },
+            {
+                "id": "ts_smoke",
+                "cmd": (
+                    "cd /home/coder/project && "
+                    "mkdir -p .tmp-healthcheck && "
+                    "cat > hello.ts <<'EOF'\n"
+                    "const msg: string = 'TS OK';\n"
+                    "console.log(msg);\n"
+                    "EOF\n"
+                    "npx tsc hello.ts --target es2020 --module commonjs --outDir .tmp-healthcheck && "
+                    "node .tmp-healthcheck/hello.js"
+                ),
+                "expect": "TS OK",
+            },
+        ]
+
+        container_name = f"computex_node_healthcheck_{int(time.time())}"
+        container = None
+        results: List[Dict[str, Any]] = []
+
+        try:
+            container = self.client.containers.run(
+                effective_image,
+                name=container_name,
+                entrypoint="/bin/bash",
+                command=["-lc", "sleep 600"],
+                detach=True,
+                working_dir="/home/coder/project",
+            )
+
+            for check in checks:
+                result = container.exec_run(
+                    ["/bin/bash", "-lc", check["cmd"]],
+                    user="coder",
+                )
+                exit_code = int(getattr(result, "exit_code", 1))
+                output = getattr(result, "output", b"")
+                if isinstance(output, bytes):
+                    output = output.decode("utf-8", errors="replace")
+                output_text = (output or "").strip()
+                passed = exit_code == 0
+                expect = check.get("expect")
+                if passed and expect:
+                    passed = expect in output_text
+                results.append(
+                    {
+                        "id": check["id"],
+                        "ok": passed,
+                        "exit_code": exit_code,
+                        "output": output_text,
+                    }
+                )
+                if not passed:
+                    return False, f"Node healthcheck failed at {check['id']}", {
+                        "image": effective_image,
+                        "checks": results,
+                    }
+
+            return True, "Node runtime healthcheck passed", {
+                "image": effective_image,
+                "checks": results,
+            }
+        except Exception as exc:
+            return False, f"Node healthcheck failed: {exc}", {
+                "image": effective_image,
+                "checks": results,
+            }
+        finally:
+            if container is not None:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
+
     def start_code_server_session(
         self,
         session_id: str,
@@ -233,6 +339,9 @@ class DockerManager:
         legacy_aliases = {
             "computex-code": "computex-python-interpreter",
             "computex-python": "computex-python-interpreter",
+            "computex-node": "computex-node-interpreter",
+            "computex-php": "computex-php-interpreter",
+            "computex-java": "computex-java-interpreter",
         }
         effective_image = legacy_aliases.get(requested_image, requested_image)
         if effective_image != requested_image:
@@ -324,6 +433,30 @@ class DockerManager:
                                 _allow_python_recovery=False,
                             )
                         return False, python_ready_msg, {}
+                if is_node_ready_image(effective_image):
+                    node_ready_ok, node_ready_msg = self._bootstrap_node_workspace(container)
+                    if not node_ready_ok:
+                        try:
+                            container.remove(force=True)
+                        except Exception:
+                            pass
+                        return False, node_ready_msg, {}
+                if is_php_ready_image(effective_image):
+                    php_ready_ok, php_ready_msg = self._bootstrap_php_workspace(container)
+                    if not php_ready_ok:
+                        try:
+                            container.remove(force=True)
+                        except Exception:
+                            pass
+                        return False, php_ready_msg, {}
+                if is_java_ready_image(effective_image):
+                    java_ready_ok, java_ready_msg = self._bootstrap_java_workspace(container)
+                    if not java_ready_ok:
+                        try:
+                            container.remove(force=True)
+                        except Exception:
+                            pass
+                        return False, java_ready_msg, {}
                 access_url = f"http://{self._detect_host_ip()}:{host_port}"
                 if progress_callback:
                     progress_callback(
@@ -413,6 +546,232 @@ class DockerManager:
                 output = output.decode("utf-8", errors="replace")
             return False, f"Python workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
         return True, "Python workspace ready"
+
+    def _bootstrap_node_workspace(self, container) -> Tuple[bool, str]:
+        try:
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                "NODE_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
+                "NODE_EXT_CACHE='/opt/computex/extensions-cache-node' && "
+                "if [ -d \"$NODE_EXT_CACHE\" ]; then "
+                "mkdir -p \"$NODE_EXT_DIR\" && "
+                "cp -a \"$NODE_EXT_CACHE\"/. \"$NODE_EXT_DIR\"/ >/dev/null 2>&1 || true; "
+                "fi && "
+                "for ext in "
+                "dbaeumer.vscode-eslint "
+                "esbenp.prettier-vscode "
+                "ms-vscode.vscode-typescript-next "
+                "ritwickdey.LiveServer "
+                "bradlc.vscode-tailwindcss; do "
+                "if ! code-server --list-extensions | grep -Fxiq \"$ext\"; then "
+                "code-server --install-extension \"$ext\" >/dev/null 2>&1 || true; "
+                "fi; "
+                "done && "
+                "code-server --list-extensions | grep -Fxiq ms-vscode.vscode-typescript-next && "
+                "python3 - <<'PY'\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "settings_targets = [\n"
+                "    Path('/home/coder/project/.vscode/settings.json'),\n"
+                "    Path('/home/coder/.local/share/code-server/User/settings.json'),\n"
+                "]\n"
+                "updates = {\n"
+                "    'javascript.updateImportsOnFileMove.enabled': 'always',\n"
+                "    'typescript.updateImportsOnFileMove.enabled': 'always',\n"
+                "    'editor.formatOnSave': True,\n"
+                "    'liveServer.settings.donotShowInfoMsg': True,\n"
+                "    'eslint.validate': [\n"
+                "        'javascript',\n"
+                "        'javascriptreact',\n"
+                "        'typescript',\n"
+                "        'typescriptreact',\n"
+                "        'html',\n"
+                "    ],\n"
+                "}\n"
+                "tsdk_candidates = [\n"
+                "    Path('/usr/local/lib/node_modules/typescript/lib'),\n"
+                "    Path('/usr/lib/node_modules/typescript/lib'),\n"
+                "]\n"
+                "detected_tsdk = next((str(candidate) for candidate in tsdk_candidates if (candidate / 'tsserver.js').exists()), None)\n"
+                "if detected_tsdk:\n"
+                "    updates['typescript.tsdk'] = detected_tsdk\n"
+                "for settings_file in settings_targets:\n"
+                "    settings_file.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    data = {}\n"
+                "    if settings_file.exists():\n"
+                "        try:\n"
+                "            data = json.loads(settings_file.read_text() or '{}')\n"
+                "        except Exception:\n"
+                "            data = {}\n"
+                "    if 'typescript.tsdk' in data and not detected_tsdk:\n"
+                "        data.pop('typescript.tsdk', None)\n"
+                "    data.update(updates)\n"
+                "    settings_file.write_text(json.dumps(data, indent=2))\n"
+                "PY\n"
+                "node --version >/dev/null 2>&1 && npm --version >/dev/null 2>&1"
+            )
+            result = container.exec_run(
+                [
+                    "/bin/bash",
+                    "-lc",
+                    bootstrap_cmd,
+                ],
+                user="coder",
+            )
+        except Exception as exc:
+            return False, f"Node workspace bootstrap failed: {exc}"
+
+        exit_code = getattr(result, "exit_code", 1)
+        output = getattr(result, "output", b"")
+        if exit_code != 0:
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return False, f"Node workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
+        return True, "Node workspace ready"
+
+    def _bootstrap_php_workspace(self, container) -> Tuple[bool, str]:
+        try:
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                "PHP_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
+                "PHP_EXT_CACHE='/opt/computex/extensions-cache-php' && "
+                "if [ -d \"$PHP_EXT_CACHE\" ]; then "
+                "mkdir -p \"$PHP_EXT_DIR\" && "
+                "cp -a \"$PHP_EXT_CACHE\"/. \"$PHP_EXT_DIR\"/ >/dev/null 2>&1 || true; "
+                "fi && "
+                "for ext in "
+                "xdebug.php-pack "
+                "bmewburn.vscode-intelephense-client "
+                "mehedidracula.php-namespace-resolver "
+                "esbenp.prettier-vscode; do "
+                "if ! code-server --list-extensions | grep -Fxiq \"$ext\"; then "
+                "code-server --install-extension \"$ext\" >/dev/null 2>&1 || true; "
+                "fi; "
+                "done && "
+                "code-server --list-extensions | grep -Fxiq bmewburn.vscode-intelephense-client && "
+                "python3 - <<'PY'\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "settings_targets = [\n"
+                "    Path('/home/coder/project/.vscode/settings.json'),\n"
+                "    Path('/home/coder/.local/share/code-server/User/settings.json'),\n"
+                "]\n"
+                "updates = {\n"
+                "    'php.validate.executablePath': '/usr/bin/php',\n"
+                "    'php.suggest.basic': False,\n"
+                "    'editor.formatOnSave': True,\n"
+                "    'files.associations': {\n"
+                "        '*.php': 'php',\n"
+                "    },\n"
+                "}\n"
+                "for settings_file in settings_targets:\n"
+                "    settings_file.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    data = {}\n"
+                "    if settings_file.exists():\n"
+                "        try:\n"
+                "            data = json.loads(settings_file.read_text() or '{}')\n"
+                "        except Exception:\n"
+                "            data = {}\n"
+                "    data.update(updates)\n"
+                "    settings_file.write_text(json.dumps(data, indent=2))\n"
+                "PY\n"
+                "php --version >/dev/null 2>&1 && composer --version >/dev/null 2>&1"
+            )
+            result = container.exec_run(
+                [
+                    "/bin/bash",
+                    "-lc",
+                    bootstrap_cmd,
+                ],
+                user="coder",
+            )
+        except Exception as exc:
+            return False, f"PHP workspace bootstrap failed: {exc}"
+
+        exit_code = getattr(result, "exit_code", 1)
+        output = getattr(result, "output", b"")
+        if exit_code != 0:
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return False, f"PHP workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
+        return True, "PHP workspace ready"
+
+    def _bootstrap_java_workspace(self, container) -> Tuple[bool, str]:
+        try:
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                "JAVA_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
+                "JAVA_EXT_CACHE='/opt/computex/extensions-cache-java' && "
+                "if [ -d \"$JAVA_EXT_CACHE\" ]; then "
+                "mkdir -p \"$JAVA_EXT_DIR\" && "
+                "cp -a \"$JAVA_EXT_CACHE\"/. \"$JAVA_EXT_DIR\"/ >/dev/null 2>&1 || true; "
+                "fi && "
+                "for ext in "
+                "redhat.java "
+                "vscjava.vscode-java-debug "
+                "vscjava.vscode-java-test "
+                "vscjava.vscode-maven; do "
+                "if ! code-server --list-extensions | grep -Fxiq \"$ext\"; then "
+                "code-server --install-extension \"$ext\" >/dev/null 2>&1 || true; "
+                "fi; "
+                "done && "
+                "code-server --list-extensions | grep -Fxiq redhat.java && "
+                "python3 - <<'PY'\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "settings_targets = [\n"
+                "    Path('/home/coder/project/.vscode/settings.json'),\n"
+                "    Path('/home/coder/.local/share/code-server/User/settings.json'),\n"
+                "]\n"
+                "jdk_candidates = [\n"
+                "    Path('/usr/lib/jvm/java-21-openjdk-amd64'),\n"
+                "    Path('/usr/lib/jvm/java-17-openjdk-amd64'),\n"
+                "    Path('/usr/lib/jvm/default-java'),\n"
+                "]\n"
+                "detected_jdk = next((str(candidate) for candidate in jdk_candidates if (candidate / 'bin' / 'java').exists()), None)\n"
+                "updates = {\n"
+                "    'java.configuration.updateBuildConfiguration': 'automatic',\n"
+                "    'java.maven.downloadSources': True,\n"
+                "    'editor.formatOnSave': True,\n"
+                "}\n"
+                "if detected_jdk:\n"
+                "    updates['java.jdt.ls.java.home'] = detected_jdk\n"
+                "for settings_file in settings_targets:\n"
+                "    settings_file.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    data = {}\n"
+                "    if settings_file.exists():\n"
+                "        try:\n"
+                "            data = json.loads(settings_file.read_text() or '{}')\n"
+                "        except Exception:\n"
+                "            data = {}\n"
+                "    if 'java.jdt.ls.java.home' in data and not detected_jdk:\n"
+                "        data.pop('java.jdt.ls.java.home', None)\n"
+                "    data.update(updates)\n"
+                "    settings_file.write_text(json.dumps(data, indent=2))\n"
+                "PY\n"
+                "java -version >/dev/null 2>&1 && javac -version >/dev/null 2>&1 && mvn -v >/dev/null 2>&1"
+            )
+            result = container.exec_run(
+                [
+                    "/bin/bash",
+                    "-lc",
+                    bootstrap_cmd,
+                ],
+                user="coder",
+            )
+        except Exception as exc:
+            return False, f"Java workspace bootstrap failed: {exc}"
+
+        exit_code = getattr(result, "exit_code", 1)
+        output = getattr(result, "output", b"")
+        if exit_code != 0:
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return False, f"Java workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
+        return True, "Java workspace ready"
 
     def _resolve_workspace_browse_root(self, workspace_path: str) -> Tuple[bool, str, Optional[Path], Optional[Path]]:
         root = Path(workspace_path or "").expanduser()
@@ -551,6 +910,7 @@ class DockerManager:
             ".config",
             ".local",
             ".cache",
+            "node_modules",
             "__pycache__",
             ".pytest_cache",
             ".mypy_cache",
@@ -668,12 +1028,19 @@ class DockerManager:
 
         with self._coding_prepare_lock:
             state = self.state_store.load()
-            if state.get("coding_images_prepared") and not force:
+            catalog = list(self.coding_image_catalog)
+            state_prepared_images = state.get("coding_images_prepared_set")
+            if not isinstance(state_prepared_images, list):
+                state_prepared_images = []
+            state_prepared_lookup = {str(image) for image in state_prepared_images}
+            pending_images = [image for image in catalog if force or image not in state_prepared_lookup]
+
+            if state.get("coding_images_prepared") and not pending_images:
                 return True, "Coding images already prepared"
 
             prepared = []
             failures = []
-            for image in self.coding_image_catalog:
+            for image in pending_images:
                 ok, msg = self.ensure_image(image, force_rebuild=force)
                 if ok:
                     prepared.append(image)
@@ -682,8 +1049,12 @@ class DockerManager:
 
             if failures:
                 return False, "Some coding images failed to prepare: " + " | ".join(failures)
+            prepared_set = sorted(state_prepared_lookup.union(prepared).union(catalog if force else []))
             state["coding_images_prepared"] = True
+            state["coding_images_prepared_set"] = prepared_set
             self.state_store.save(state)
+            if not prepared:
+                return True, "Coding images already prepared"
             return True, "Coding images ready: " + ", ".join(prepared)
 
     def _find_available_port(self, start_port: int = 8000, end_port: int = 8999) -> int:

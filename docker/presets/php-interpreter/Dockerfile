@@ -1,0 +1,43 @@
+FROM codercom/code-server:latest
+
+USER root
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        unzip \
+        python3 \
+        php-cli \
+        php-common \
+        php-curl \
+        php-mbstring \
+        php-xml \
+        php-zip \
+        php-sqlite3 \
+        composer \
+    && mkdir -p /home/coder/project /home/coder/.config/code-server /home/coder/.local/share/code-server/User \
+    && printf '%s\n' '{' \
+    '  "extensions.autoUpdate": false,' \
+    '  "extensions.autoCheckUpdates": false,' \
+    '  "update.mode": "none"' \
+    '}' > /home/coder/.local/share/code-server/User/settings.json \
+    && chown -R coder:coder /home/coder \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/coder/project
+EXPOSE 8080
+
+USER coder
+RUN php --version && composer --version
+RUN code-server --install-extension xdebug.php-pack || true
+RUN code-server --install-extension bmewburn.vscode-intelephense-client || true
+RUN code-server --install-extension mehedidracula.php-namespace-resolver || true
+RUN code-server --install-extension esbenp.prettier-vscode || true
+
+USER root
+RUN mkdir -p /opt/computex/extensions-cache-php \
+    && cp -a /home/coder/.local/share/code-server/extensions/. /opt/computex/extensions-cache-php/ 2>/dev/null || true \
+    && chown -R coder:coder /opt/computex
+
+USER coder

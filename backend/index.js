@@ -30,9 +30,18 @@ const HOST_ONLINE_WINDOW_MS = 2 * 60 * 1000;
 const DEFAULT_CODE_SERVER_IMAGE = process.env.COMPUTEX_CODE_IMAGE || "computex-code";
 const DEFAULT_PYTHON_INTERPRETER_IMAGE =
   process.env.COMPUTEX_IMAGE_PYTHON_INTERPRETER || process.env.COMPUTEX_IMAGE_PYTHON || "computex-python-interpreter";
+const DEFAULT_NODE_INTERPRETER_IMAGE =
+  process.env.COMPUTEX_IMAGE_NODE_INTERPRETER || process.env.COMPUTEX_IMAGE_NODE || "computex-node-interpreter";
+const DEFAULT_PHP_INTERPRETER_IMAGE =
+  process.env.COMPUTEX_IMAGE_PHP_INTERPRETER || process.env.COMPUTEX_IMAGE_PHP || "computex-php-interpreter";
+const DEFAULT_JAVA_INTERPRETER_IMAGE =
+  process.env.COMPUTEX_IMAGE_JAVA_INTERPRETER || process.env.COMPUTEX_IMAGE_JAVA || "computex-java-interpreter";
 const IMAGE_ALIAS_MAP = new Map([
   [DEFAULT_CODE_SERVER_IMAGE, DEFAULT_PYTHON_INTERPRETER_IMAGE],
   ["computex-python", DEFAULT_PYTHON_INTERPRETER_IMAGE],
+  ["computex-node", DEFAULT_NODE_INTERPRETER_IMAGE],
+  ["computex-php", DEFAULT_PHP_INTERPRETER_IMAGE],
+  ["computex-java", DEFAULT_JAVA_INTERPRETER_IMAGE],
 ]);
 const DEFAULT_SESSION_ROOT = process.env.COMPUTEX_SESSION_ROOT || "C:/computex/projects";
 const DEFAULT_WORKSPACE_ROOT = process.env.COMPUTEX_WORKSPACE_ROOT || "C:/computex/workspaces";
@@ -76,7 +85,7 @@ const NO_HEALTHY_HOST_MESSAGE =
   "All available hosts are currently above safe load limits. Please retry in a moment.";
 const WORKSPACE_TOOL_LIMIT = 5;
 const BILLING_MINUTES_PER_CREDIT = 60;
-const BILLING_ETB_PER_CREDIT = 100;
+const BILLING_ETB_PER_CREDIT = 1;
 const BILLING_ETB_PER_MINUTE = BILLING_ETB_PER_CREDIT / BILLING_MINUTES_PER_CREDIT;
 const WORKSPACE_TOOL_CATALOG = [
   { id: "python", label: "Python", logo: "PY" },
@@ -113,7 +122,7 @@ const WORKSPACE_PRESETS = [
     key: "node",
     name: "Web Dev Workspace",
     tools: ["node", "git"],
-    image_key: process.env.COMPUTEX_IMAGE_NODE || "computex-node",
+    image_key: DEFAULT_NODE_INTERPRETER_IMAGE,
   },
   {
     key: "flutter",
@@ -149,7 +158,7 @@ const WORKSPACE_PRESETS = [
     key: "java",
     name: "Java Workspace",
     tools: ["java", "git", "docker"],
-    image_key: process.env.COMPUTEX_IMAGE_JAVA || "computex-java",
+    image_key: DEFAULT_JAVA_INTERPRETER_IMAGE,
   },
   {
     key: "cpp",
@@ -161,7 +170,7 @@ const WORKSPACE_PRESETS = [
     key: "php",
     name: "PHP Workspace",
     tools: ["php", "git", "node"],
-    image_key: process.env.COMPUTEX_IMAGE_PHP || "computex-php",
+    image_key: DEFAULT_PHP_INTERPRETER_IMAGE,
   },
   {
     key: "dotnet",
@@ -1542,13 +1551,13 @@ function inferImageForTools(selectedTools = []) {
   if (tools.has("flutter")) return process.env.COMPUTEX_IMAGE_FLUTTER || "computex-flutter";
   if (tools.has("dotnet")) return process.env.COMPUTEX_IMAGE_DOTNET || "computex-dotnet";
   if (tools.has("rust")) return process.env.COMPUTEX_IMAGE_RUST || "computex-rust";
-  if (tools.has("java")) return process.env.COMPUTEX_IMAGE_JAVA || "computex-java";
+  if (tools.has("java")) return DEFAULT_JAVA_INTERPRETER_IMAGE;
   if (tools.has("cpp")) return process.env.COMPUTEX_IMAGE_CPP || "computex-cpp";
-  if (tools.has("php")) return process.env.COMPUTEX_IMAGE_PHP || "computex-php";
+  if (tools.has("php")) return DEFAULT_PHP_INTERPRETER_IMAGE;
   if (tools.has("go")) return process.env.COMPUTEX_IMAGE_GO || "computex-go";
   if (tools.has("jupyter")) return process.env.COMPUTEX_IMAGE_DATA || "computex-data";
   if (tools.has("python") && tools.has("node")) return process.env.COMPUTEX_IMAGE_FULLSTACK || "computex-fullstack";
-  if (tools.has("node")) return process.env.COMPUTEX_IMAGE_NODE || "computex-node";
+  if (tools.has("node")) return DEFAULT_NODE_INTERPRETER_IMAGE;
   if (tools.has("python")) return DEFAULT_PYTHON_INTERPRETER_IMAGE;
   return DEFAULT_CODE_SERVER_IMAGE;
 }

@@ -231,6 +231,10 @@ class HostBridge:
                 )
             elif command == "pull_image":
                 ok, msg = self.docker.pull_image(image=data.get("image", "computex-dev-env"))
+            elif command == "node_healthcheck":
+                ok, msg, meta = self.docker.verify_node_runtime(
+                    image=data.get("image", "computex-node-interpreter")
+                )
             else:
                 msg = f"Unknown host command: {command}"
 

@@ -43,6 +43,51 @@ const FALLBACK_ENVIRONMENTS = [
 ];
 
 const SESSION_LAUNCH_TIMEOUT_MS = 30 * 60 * 1000;
+const CODING_RUNTIME_OPTIONS = [
+  {
+    key: "python",
+    label: "Python",
+    description: "Python interpreter, venv support, and Python extensions.",
+    payload: {
+      preset_key: "python",
+      tools: ["python", "git"],
+      image: "computex-python-interpreter",
+    },
+  },
+  {
+    key: "node",
+    label: "Node.js",
+    description: "Node.js runtime with JavaScript/TypeScript tooling and extensions.",
+    payload: {
+      preset_key: "node",
+      tools: ["node", "git"],
+      image: "computex-node-interpreter",
+    },
+  },
+  {
+    key: "php",
+    label: "PHP",
+    description: "PHP runtime with Composer and PHP-focused code-server extensions.",
+    payload: {
+      preset_key: "php",
+      tools: ["php", "git"],
+      image: "computex-php-interpreter",
+    },
+  },
+  {
+    key: "java",
+    label: "Java",
+    description: "OpenJDK + Maven + Gradle with Java language tooling extensions.",
+    payload: {
+      preset_key: "java",
+      tools: ["java", "git"],
+      image: "computex-java-interpreter",
+    },
+  },
+];
+
+const getCodingRuntimeOption = (runtimeKey) =>
+  CODING_RUNTIME_OPTIONS.find((option) => option.key === runtimeKey) || CODING_RUNTIME_OPTIONS[0];
 
 function EnvironmentCard({ environment, onLaunch, loading }) {
   const isLive = environment.status === "available";
@@ -103,6 +148,9 @@ export default function SessionLaunchPage() {
   const [environments, setEnvironments] = useState(FALLBACK_ENVIRONMENTS);
   const [lastLaunch, setLastLaunch] = useState(null);
   const [pendingLaunchSessionId, setPendingLaunchSessionId] = useState(null);
+  const [runtimePickerOpen, setRuntimePickerOpen] = useState(false);
+  const [selectedRuntime, setSelectedRuntime] = useState("python");
+  const [pendingEnvironment, setPendingEnvironment] = useState(null);
 
   const openCodeServer = (destination) => {
     if (!destination) return;
@@ -170,7 +218,7 @@ export default function SessionLaunchPage() {
     };
   }, [pendingLaunchSessionId]);
 
-  const startEnvironment = async (environment) => {
+  const startEnvironment = async (environment, runtimeKey = null) => {
     if (loading || environment.status !== "available") return;
 
     setLoading(true);
@@ -178,10 +226,15 @@ export default function SessionLaunchPage() {
       const payload = {
         environment: environment.id,
       };
+      const runtimeOption =
+        environment.id === "coding" ? getCodingRuntimeOption(runtimeKey || selectedRuntime) : null;
       if (environment.id === "coding") {
-        payload.preset_key = "code";
-        payload.tools = ["git"];
-        payload.image = "computex-code";
+        payload.preset_key = runtimeOption.payload.preset_key;
+        payload.tools = runtimeOption.payload.tools;
+        payload.image = runtimeOption.payload.image;
+        // Keep launcher sessions runtime-specific and avoid reusing the last saved coding workspace profile.
+        payload.skip_workspace = true;
+        payload.defer_workspace_save = true;
       }
       const res = await emitSessionStart(payload, SESSION_LAUNCH_TIMEOUT_MS);
       const session = res?.session;
@@ -189,7 +242,10 @@ export default function SessionLaunchPage() {
       setPendingLaunchSessionId(session?.id || null);
 
       setLastLaunch({
-        title: environment.title,
+        title:
+          environment.id === "coding" && runtimeOption
+            ? `${environment.title} (${runtimeOption.label})`
+            : environment.title,
         accessUrl: launch.access_url || session?.access_url || null,
         password: launch.access_password || session?.access_password || null,
       });
@@ -205,6 +261,28 @@ export default function SessionLaunchPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLaunchIntent = (environment) => {
+    if (loading || environment.status !== "available") return;
+    if (environment.id !== "coding") {
+      startEnvironment(environment);
+      return;
+    }
+    setPendingEnvironment(environment);
+    setRuntimePickerOpen(true);
+  };
+
+  const confirmRuntimeAndLaunch = async () => {
+    if (!pendingEnvironment) {
+      setRuntimePickerOpen(false);
+      return;
+    }
+    const environment = pendingEnvironment;
+    const runtime = selectedRuntime;
+    setRuntimePickerOpen(false);
+    setPendingEnvironment(null);
+    await startEnvironment(environment, runtime);
   };
 
   return (
@@ -230,11 +308,68 @@ export default function SessionLaunchPage() {
             <EnvironmentCard
               key={environment.id}
               environment={environment}
-              onLaunch={startEnvironment}
+              onLaunch={handleLaunchIntent}
               loading={loading && environment.id === "coding"}
             />
           ))}
         </div>
+
+        {runtimePickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+            <div className="w-full max-w-xl rounded-3xl border border-white/15 bg-slate-900 p-6 shadow-2xl">
+              <div className="text-sm uppercase tracking-[0.2em] text-sky-300/80">Coding Runtime</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-100">Choose Language Runtime</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Select which engine should power this new coding session.
+              </p>
+
+              <div className="mt-5 max-h-72 overflow-y-auto pr-1">
+                <div className="grid grid-cols-3 gap-3">
+                  {CODING_RUNTIME_OPTIONS.map((option) => {
+                    const active = selectedRuntime === option.key;
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => setSelectedRuntime(option.key)}
+                        className={`min-h-[132px] rounded-2xl border px-4 py-4 text-left transition ${
+                          active
+                            ? "border-sky-400 bg-sky-500/20 text-sky-100"
+                            : "border-white/10 bg-white/5 text-slate-200 hover:border-white/30"
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{option.label}</div>
+                        <div className="mt-1 text-xs text-slate-300">{option.description}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (loading) return;
+                    setRuntimePickerOpen(false);
+                    setPendingEnvironment(null);
+                  }}
+                  className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmRuntimeAndLaunch}
+                  disabled={loading}
+                  className="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {loading ? "Starting..." : "Open app"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {lastLaunch && (
           <motion.div

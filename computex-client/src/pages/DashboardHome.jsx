@@ -10,7 +10,7 @@ import ContainerCard from "../components/ContainerCard";
 
 const SESSION_POLL_REQUEST_TIMEOUT_MS = 1500;
 const MINUTES_PER_CREDIT = 60;
-const ETB_PER_CREDIT = 100;
+const ETB_PER_CREDIT = 1;
 const ETB_PER_MINUTE = ETB_PER_CREDIT / MINUTES_PER_CREDIT;
 
 const formatMinutes = (minutes) => {
@@ -293,7 +293,7 @@ function CreditsCard({ credits }) {
           <div className="text-right">
             <div className="text-xs text-slate-300">Rate</div>
             <div className="text-sm font-semibold text-emerald-200">1 credit = 60 min</div>
-            <div className="text-sm font-semibold text-emerald-200">100 ETB / credit</div>
+            <div className="text-sm font-semibold text-emerald-200">1 ETB / credit</div>
           </div>
         </div>
 
@@ -387,7 +387,7 @@ function OverviewBanner({ credits, sessions = [], theme }) {
       <div className="relative">
         <h2 className={`text-xl sm:text-2xl font-bold ${isDark ? "text-slate-100" : "text-slate-900"}`}>Compute Snapshot</h2>
         <p className={`text-xs sm:text-sm mt-1 ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-          Minute-based billing is live: 60 minutes per credit, 100 ETB per credit.
+          Minute-based billing is live: 60 minutes per credit, 1 ETB per credit.
         </p>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className={`rounded-2xl p-3 border ${isDark ? "bg-white/5 border-white/10 text-slate-100" : "bg-white/80 border-sky-200 text-slate-900"}`}>
