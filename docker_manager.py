@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from code_server_image_manager import (
     get_coding_image_catalog,
+    is_cpp_ready_image,
     is_java_ready_image,
     is_node_ready_image,
     is_php_ready_image,
@@ -72,6 +73,7 @@ class DockerManager:
         }
         self.coding_image_catalog = get_coding_image_catalog()
         self._coding_prepare_lock = threading.Lock()
+        self._runtime_prepare_lock = threading.Lock()
 
     def resolve_build_context_for_image(self, image: str) -> Optional[Path]:
         return resolve_managed_build_context(image)
@@ -342,6 +344,7 @@ class DockerManager:
             "computex-node": "computex-node-interpreter",
             "computex-php": "computex-php-interpreter",
             "computex-java": "computex-java-interpreter",
+            "computex-cpp": "computex-cpp-interpreter",
         }
         effective_image = legacy_aliases.get(requested_image, requested_image)
         if effective_image != requested_image:
@@ -373,6 +376,7 @@ class DockerManager:
         (resolved_workspace_path / "project").mkdir(parents=True, exist_ok=True)
         (resolved_workspace_path / ".config" / "code-server").mkdir(parents=True, exist_ok=True)
         (resolved_workspace_path / ".local" / "share" / "code-server").mkdir(parents=True, exist_ok=True)
+        self._seed_workspace_from_prewarm_cache(effective_image, resolved_workspace_path)
 
         try:
             existing = self.client.containers.get(container_name)
@@ -457,6 +461,14 @@ class DockerManager:
                         except Exception:
                             pass
                         return False, java_ready_msg, {}
+                if is_cpp_ready_image(effective_image):
+                    cpp_ready_ok, cpp_ready_msg = self._bootstrap_cpp_workspace(container)
+                    if not cpp_ready_ok:
+                        try:
+                            container.remove(force=True)
+                        except Exception:
+                            pass
+                        return False, cpp_ready_msg, {}
                 access_url = f"http://{self._detect_host_ip()}:{host_port}"
                 if progress_callback:
                     progress_callback(
@@ -549,15 +561,27 @@ class DockerManager:
 
     def _bootstrap_node_workspace(self, container) -> Tuple[bool, str]:
         try:
-            bootstrap_cmd = (
-                "cd /home/coder/project && "
-                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+            install_on_demand = os.environ.get("COMPUTEX_NODE_INSTALL_EXT_ON_DEMAND", "").lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
+            copy_cache_on_launch = os.environ.get("COMPUTEX_NODE_COPY_EXT_CACHE_ON_LAUNCH", "").lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
+            extension_cache_copy_block = (
                 "NODE_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
                 "NODE_EXT_CACHE='/opt/computex/extensions-cache-node' && "
                 "if [ -d \"$NODE_EXT_CACHE\" ]; then "
                 "mkdir -p \"$NODE_EXT_DIR\" && "
                 "cp -a \"$NODE_EXT_CACHE\"/. \"$NODE_EXT_DIR\"/ >/dev/null 2>&1 || true; "
                 "fi && "
+            ) if copy_cache_on_launch else ""
+            extension_install_block = (
                 "for ext in "
                 "dbaeumer.vscode-eslint "
                 "esbenp.prettier-vscode "
@@ -568,8 +592,13 @@ class DockerManager:
                 "code-server --install-extension \"$ext\" >/dev/null 2>&1 || true; "
                 "fi; "
                 "done && "
-                "code-server --list-extensions | grep -Fxiq ms-vscode.vscode-typescript-next && "
-                "python3 - <<'PY'\n"
+            ) if install_on_demand else ""
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                + extension_cache_copy_block
+                + extension_install_block
+                + "python3 - <<'PY'\n"
                 "import json\n"
                 "from pathlib import Path\n"
                 "settings_targets = [\n"
@@ -628,7 +657,11 @@ class DockerManager:
             if isinstance(output, bytes):
                 output = output.decode("utf-8", errors="replace")
             return False, f"Node workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
-        return True, "Node workspace ready"
+        if install_on_demand:
+            return True, "Node workspace ready (on-demand extension install enabled)"
+        if copy_cache_on_launch:
+            return True, "Node workspace ready (using copied extension cache)"
+        return True, "Node workspace ready (fast launch mode)"
 
     def _bootstrap_php_workspace(self, container) -> Tuple[bool, str]:
         try:
@@ -772,6 +805,87 @@ class DockerManager:
                 output = output.decode("utf-8", errors="replace")
             return False, f"Java workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
         return True, "Java workspace ready"
+
+    def _bootstrap_cpp_workspace(self, container) -> Tuple[bool, str]:
+        try:
+            bootstrap_cmd = (
+                "cd /home/coder/project && "
+                "mkdir -p .vscode /home/coder/.local/share/code-server/User && "
+                "CPP_EXT_DIR='/home/coder/.local/share/code-server/extensions' && "
+                "CPP_EXT_CACHE='/opt/computex/extensions-cache-cpp' && "
+                "if [ -d \"$CPP_EXT_CACHE\" ]; then "
+                "mkdir -p \"$CPP_EXT_DIR\" && "
+                "cp -a \"$CPP_EXT_CACHE\"/. \"$CPP_EXT_DIR\"/ >/dev/null 2>&1 || true; "
+                "fi && "
+                "for ext in "
+                "llvm-vs-code-extensions.vscode-clangd "
+                "ms-vscode.cmake-tools; do "
+                "if ! code-server --list-extensions | grep -Fxiq \"$ext\"; then "
+                "code-server --install-extension \"$ext\" >/dev/null 2>&1 || true; "
+                "fi; "
+                "done && "
+                "python3 - <<'PY'\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "settings_targets = [\n"
+                "    Path('/home/coder/project/.vscode/settings.json'),\n"
+                "    Path('/home/coder/.local/share/code-server/User/settings.json'),\n"
+                "]\n"
+                "updates = {\n"
+                "    'C_Cpp.default.cppStandard': 'c++20',\n"
+                "    'C_Cpp.default.intelliSenseMode': 'linux-gcc-x64',\n"
+                "    'C_Cpp.default.compilerPath': '/usr/bin/g++',\n"
+                "    'clangd.path': '/usr/bin/clangd',\n"
+                "    'cmake.configureOnOpen': True,\n"
+                "    'editor.formatOnSave': True,\n"
+                "    'code-runner.executorMap': {\n"
+                "        'cpp': 'cd $dir && g++ -Wall -Wextra \"$fileName\" -o \"$fileNameWithoutExt\" && \"$dir/$fileNameWithoutExt\"',\n"
+                "    },\n"
+                "    'C_Cpp_Runner.cCompilerPath': '/usr/bin/gcc',\n"
+                "    'C_Cpp_Runner.cppCompilerPath': '/usr/bin/g++',\n"
+                "    'C_Cpp_Runner.debuggerPath': '/usr/bin/gdb',\n"
+                "    'C_Cpp_Runner.compilerArgs': [],\n"
+                "    'files.associations': {\n"
+                "        '*.hpp': 'cpp',\n"
+                "        '*.hh': 'cpp',\n"
+                "        '*.hxx': 'cpp',\n"
+                "        '*.tpp': 'cpp',\n"
+                "    },\n"
+                "}\n"
+                "for settings_file in settings_targets:\n"
+                "    settings_file.parent.mkdir(parents=True, exist_ok=True)\n"
+                "    data = {}\n"
+                "    if settings_file.exists():\n"
+                "        try:\n"
+                "            data = json.loads(settings_file.read_text() or '{}')\n"
+                "        except Exception:\n"
+                "            data = {}\n"
+                "    data.update(updates)\n"
+                "    settings_file.write_text(json.dumps(data, indent=2))\n"
+                "PY\n"
+                "g++ --version >/dev/null 2>&1 && "
+                "clang++ --version >/dev/null 2>&1 && "
+                "cmake --version >/dev/null 2>&1 && "
+                "make --version >/dev/null 2>&1"
+            )
+            result = container.exec_run(
+                [
+                    "/bin/bash",
+                    "-lc",
+                    bootstrap_cmd,
+                ],
+                user="coder",
+            )
+        except Exception as exc:
+            return False, f"C++ workspace bootstrap failed: {exc}"
+
+        exit_code = getattr(result, "exit_code", 1)
+        output = getattr(result, "output", b"")
+        if exit_code != 0:
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return False, f"C++ workspace bootstrap failed: {str(output).strip() or 'unknown error'}"
+        return True, "C++ workspace ready"
 
     def _resolve_workspace_browse_root(self, workspace_path: str) -> Tuple[bool, str, Optional[Path], Optional[Path]]:
         root = Path(workspace_path or "").expanduser()
@@ -1057,6 +1171,142 @@ class DockerManager:
                 return True, "Coding images already prepared"
             return True, "Coding images ready: " + ", ".join(prepared)
 
+    def prepare_coding_runtime_assets(self, force: bool = False) -> Tuple[bool, str]:
+        if not self.ping():
+            return False, "Docker engine not available"
+
+        with self._runtime_prepare_lock:
+            state = self.state_store.load()
+            catalog = list(self.coding_image_catalog)
+            prepared_assets = state.get("coding_runtime_prepared_set")
+            if not isinstance(prepared_assets, list):
+                prepared_assets = []
+            prepared_lookup = {str(image) for image in prepared_assets}
+            pending_images = [image for image in catalog if force or image not in prepared_lookup]
+
+            if state.get("coding_runtime_prepared") and not pending_images:
+                return True, "Coding runtime assets already prepared"
+
+            prepared = []
+            failures = []
+            for image in pending_images:
+                ok, msg = self._prepare_runtime_asset_for_image(image, force=force)
+                if ok:
+                    prepared.append(image)
+                else:
+                    failures.append(f"{image}: {msg}")
+
+            if failures:
+                return False, "Some coding runtime assets failed to prepare: " + " | ".join(failures)
+
+            prepared_set = sorted(prepared_lookup.union(prepared).union(catalog if force else []))
+            state["coding_runtime_prepared"] = True
+            state["coding_runtime_prepared_set"] = prepared_set
+            self.state_store.save(state)
+            if not prepared:
+                return True, "Coding runtime assets already prepared"
+            return True, "Coding runtime assets ready: " + ", ".join(prepared)
+
+    def _prepare_runtime_asset_for_image(self, image: str, force: bool = False) -> Tuple[bool, str]:
+        image_ok, image_msg = self.ensure_image(image, force_rebuild=False)
+        if not image_ok:
+            return False, image_msg
+
+        workspace_path = self._prewarm_workspace_for_image(image)
+        try:
+            if force and workspace_path.exists():
+                shutil.rmtree(workspace_path, ignore_errors=True)
+            (workspace_path / "project").mkdir(parents=True, exist_ok=True)
+            (workspace_path / ".config" / "code-server").mkdir(parents=True, exist_ok=True)
+            (workspace_path / ".local" / "share" / "code-server").mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            return False, f"Failed to prepare prewarm workspace for {image}: {exc}"
+
+        container_name = f"computex_prewarm_{self._slug_image(image)}_{int(time.time())}"
+        container = None
+        try:
+            container = self.client.containers.run(
+                image,
+                name=container_name,
+                detach=True,
+                environment={"PASSWORD": "prewarm"},
+                volumes={str(workspace_path): {"bind": "/home/coder", "mode": "rw"}},
+                working_dir="/home/coder/project",
+            )
+            if is_python_ready_image(image):
+                ok, msg = self._bootstrap_python_workspace(container)
+                if not ok:
+                    return False, msg
+            if is_node_ready_image(image):
+                ok, msg = self._bootstrap_node_workspace(container)
+                if not ok:
+                    return False, msg
+            if is_php_ready_image(image):
+                ok, msg = self._bootstrap_php_workspace(container)
+                if not ok:
+                    return False, msg
+            if is_java_ready_image(image):
+                ok, msg = self._bootstrap_java_workspace(container)
+                if not ok:
+                    return False, msg
+            if is_cpp_ready_image(image):
+                ok, msg = self._bootstrap_cpp_workspace(container)
+                if not ok:
+                    return False, msg
+            return True, f"Runtime assets prepared for {image}"
+        except Exception as exc:
+            return False, f"Runtime asset prep failed for {image}: {exc}"
+        finally:
+            if container is not None:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
+
+    def _seed_workspace_from_prewarm_cache(self, image: str, workspace_path: Path) -> None:
+        prewarm_path = self._prewarm_workspace_for_image(image)
+        if not prewarm_path.exists():
+            return
+        if not self._workspace_looks_empty(workspace_path):
+            return
+
+        try:
+            copy_map = []
+            if is_python_ready_image(image):
+                # Python gains most from reusing a prepared virtualenv.
+                copy_map.append((prewarm_path / "project" / ".venv", workspace_path / "project" / ".venv"))
+            else:
+                # For non-Python runtimes, avoid copying large extension trees at launch time.
+                copy_map.append((prewarm_path / ".vscode", workspace_path / ".vscode"))
+            for src, dst in copy_map:
+                if not src.exists():
+                    continue
+                if src.is_dir():
+                    shutil.copytree(src, dst, dirs_exist_ok=True)
+                else:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+        except Exception as exc:
+            self.record_activity(f"workspace prewarm seed skipped: {exc}")
+
+    def _workspace_looks_empty(self, workspace_path: Path) -> bool:
+        project_path = workspace_path / "project"
+        try:
+            if project_path.exists():
+                for child in project_path.iterdir():
+                    if child.name not in {".venv", ".vscode"}:
+                        return False
+            return True
+        except Exception:
+            return False
+
+    def _prewarm_workspace_for_image(self, image: str) -> Path:
+        root = Path(os.environ.get("COMPUTEX_PREWARM_ROOT", "C:/computex/cache/prewarm"))
+        return root / self._slug_image(image)
+
+    def _slug_image(self, image: str) -> str:
+        return "".join(ch if ch.isalnum() else "_" for ch in (image or "image")).strip("_") or "image"
+
     def _find_available_port(self, start_port: int = 8000, end_port: int = 8999) -> int:
         allocated_ports = self._get_allocated_host_ports()
         for port in range(start_port, end_port + 1):
@@ -1278,5 +1528,3 @@ class DockerManager:
         state = self.state_store.load()
         state["last_error"] = message
         self.state_store.save(state)
-
-

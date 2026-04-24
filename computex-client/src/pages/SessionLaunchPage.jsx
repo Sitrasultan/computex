@@ -45,6 +45,16 @@ const FALLBACK_ENVIRONMENTS = [
 const SESSION_LAUNCH_TIMEOUT_MS = 30 * 60 * 1000;
 const CODING_RUNTIME_OPTIONS = [
   {
+    key: "clean",
+    label: "Clean Code Server",
+    description: "Lightweight code-server only for HTML, CSS, JS, and extension-based workflows.",
+    payload: {
+      preset_key: "clean",
+      tools: ["git"],
+      image: "computex-clean",
+    },
+  },
+  {
     key: "python",
     label: "Python",
     description: "Python interpreter, venv support, and Python extensions.",
@@ -82,6 +92,16 @@ const CODING_RUNTIME_OPTIONS = [
       preset_key: "java",
       tools: ["java", "git"],
       image: "computex-java-interpreter",
+    },
+  },
+  {
+    key: "cpp",
+    label: "C++",
+    description: "GCC/Clang toolchains with CMake, GDB, and C/C++ language tooling.",
+    payload: {
+      preset_key: "cpp",
+      tools: ["cpp", "git"],
+      image: "computex-cpp-interpreter",
     },
   },
 ];
@@ -149,7 +169,7 @@ export default function SessionLaunchPage() {
   const [lastLaunch, setLastLaunch] = useState(null);
   const [pendingLaunchSessionId, setPendingLaunchSessionId] = useState(null);
   const [runtimePickerOpen, setRuntimePickerOpen] = useState(false);
-  const [selectedRuntime, setSelectedRuntime] = useState("python");
+  const [selectedRuntime, setSelectedRuntime] = useState("clean");
   const [pendingEnvironment, setPendingEnvironment] = useState(null);
 
   const openCodeServer = (destination) => {
@@ -324,7 +344,7 @@ export default function SessionLaunchPage() {
               </p>
 
               <div className="mt-5 max-h-72 overflow-y-auto pr-1">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {CODING_RUNTIME_OPTIONS.map((option) => {
                     const active = selectedRuntime === option.key;
                     return (
@@ -339,7 +359,7 @@ export default function SessionLaunchPage() {
                         }`}
                       >
                         <div className="text-sm font-semibold">{option.label}</div>
-                        <div className="mt-1 text-xs text-slate-300">{option.description}</div>
+                        <div className="mt-1 hidden text-xs text-slate-300 sm:block">{option.description}</div>
                       </button>
                     );
                   })}

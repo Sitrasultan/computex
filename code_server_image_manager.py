@@ -56,8 +56,20 @@ DEFAULT_JAVA_CONTEXT = (
     LEGACY_JAVA_CONTEXT if LEGACY_JAVA_CONTEXT.exists() else DEFAULT_JAVA_INTERPRETER_CONTEXT
 )
 
+DEFAULT_CPP_INTERPRETER_CONTEXT = Path(
+    os.environ.get(
+        "COMPUTEX_CODE_CPP_INTERPRETER_CONTEXT",
+        str(DEFAULT_DOCKER_ROOT / "presets" / "cpp-interpreter"),
+    )
+)
+LEGACY_CPP_CONTEXT = DEFAULT_DOCKER_ROOT / "presets" / "cpp"
+DEFAULT_CPP_CONTEXT = (
+    LEGACY_CPP_CONTEXT if LEGACY_CPP_CONTEXT.exists() else DEFAULT_CPP_INTERPRETER_CONTEXT
+)
+
 DEFAULT_IMAGE_BUILD_CONTEXTS: Dict[str, Path] = {
     "computex-code": DEFAULT_CODE_SERVER_BUILD_CONTEXT,
+    "computex-clean": DEFAULT_CODE_SERVER_BUILD_CONTEXT,
     "computex-python-interpreter": DEFAULT_PYTHON_INTERPRETER_CONTEXT,
     "computex-python": DEFAULT_PYTHON_CONTEXT,
     "computex-node-interpreter": DEFAULT_NODE_INTERPRETER_CONTEXT,
@@ -66,6 +78,8 @@ DEFAULT_IMAGE_BUILD_CONTEXTS: Dict[str, Path] = {
     "computex-php": DEFAULT_PHP_CONTEXT,
     "computex-java-interpreter": DEFAULT_JAVA_INTERPRETER_CONTEXT,
     "computex-java": DEFAULT_JAVA_CONTEXT,
+    "computex-cpp-interpreter": DEFAULT_CPP_INTERPRETER_CONTEXT,
+    "computex-cpp": DEFAULT_CPP_CONTEXT,
     "computex-flutter": DEFAULT_DOCKER_ROOT / "presets" / "flutter",
     "computex-fullstack": DEFAULT_DOCKER_ROOT / "presets" / "fullstack",
     "computex-data": DEFAULT_DOCKER_ROOT / "presets" / "data",
@@ -101,6 +115,11 @@ JAVA_READY_IMAGES: Set[str] = {
     "computex-java",
 }
 
+CPP_READY_IMAGES: Set[str] = {
+    "computex-cpp-interpreter",
+    "computex-cpp",
+}
+
 
 def resolve_build_context_for_image(image: str) -> Optional[Path]:
     context = DEFAULT_IMAGE_BUILD_CONTEXTS.get(image)
@@ -128,14 +147,20 @@ def is_java_ready_image(image: str) -> bool:
     return image in JAVA_READY_IMAGES
 
 
+def is_cpp_ready_image(image: str) -> bool:
+    return image in CPP_READY_IMAGES
+
+
 def get_coding_image_catalog() -> List[str]:
     # Warmup keeps startup quick while preparing core coding presets by default.
     default_images = [
         "computex-code",
+        "computex-clean",
         "computex-python-interpreter",
         "computex-node-interpreter",
         "computex-php-interpreter",
         "computex-java-interpreter",
+        "computex-cpp-interpreter",
     ]
     if os.environ.get("COMPUTEX_PREBUILD_ALL_IMAGES", "").lower() in ("1", "true", "yes", "on"):
         default_images = list(DEFAULT_IMAGE_BUILD_CONTEXTS.keys())

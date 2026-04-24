@@ -110,11 +110,21 @@ class HostBridge:
 
         def _worker():
             self.on_log("Preparing coding images on host...")
-            ok, msg = self.docker.prepare_coding_images(force=False)
-            self.on_log(msg)
-            if not ok:
-                self.on_log("Continuing with partial image availability; missing images will be prepared on demand.")
-            self.on_state_change("connected")
+            try:
+                ok, msg = self.docker.prepare_coding_images(force=False)
+                self.on_log(msg)
+                if not ok:
+                    self.on_log("Continuing with partial image availability; missing images will be prepared on demand.")
+                self.on_log("Preparing coding runtime assets on host...")
+                assets_ok, assets_msg = self.docker.prepare_coding_runtime_assets(force=False)
+                self.on_log(assets_msg)
+                if not assets_ok:
+                    self.on_log("Continuing with partial runtime assets; missing assets will be prepared on demand.")
+            except Exception as exc:
+                self.on_log(f"Coding image preparation failed unexpectedly: {exc}")
+                self.on_log("Continuing with on-demand image preparation.")
+            finally:
+                self.on_state_change("connected")
 
         self._coding_image_prepare_thread = threading.Thread(target=_worker, daemon=True)
         self._coding_image_prepare_thread.start()

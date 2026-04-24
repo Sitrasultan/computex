@@ -36,12 +36,15 @@ const DEFAULT_PHP_INTERPRETER_IMAGE =
   process.env.COMPUTEX_IMAGE_PHP_INTERPRETER || process.env.COMPUTEX_IMAGE_PHP || "computex-php-interpreter";
 const DEFAULT_JAVA_INTERPRETER_IMAGE =
   process.env.COMPUTEX_IMAGE_JAVA_INTERPRETER || process.env.COMPUTEX_IMAGE_JAVA || "computex-java-interpreter";
+const DEFAULT_CPP_INTERPRETER_IMAGE =
+  process.env.COMPUTEX_IMAGE_CPP_INTERPRETER || process.env.COMPUTEX_IMAGE_CPP || "computex-cpp-interpreter";
 const IMAGE_ALIAS_MAP = new Map([
   [DEFAULT_CODE_SERVER_IMAGE, DEFAULT_PYTHON_INTERPRETER_IMAGE],
   ["computex-python", DEFAULT_PYTHON_INTERPRETER_IMAGE],
   ["computex-node", DEFAULT_NODE_INTERPRETER_IMAGE],
   ["computex-php", DEFAULT_PHP_INTERPRETER_IMAGE],
   ["computex-java", DEFAULT_JAVA_INTERPRETER_IMAGE],
+  ["computex-cpp", DEFAULT_CPP_INTERPRETER_IMAGE],
 ]);
 const DEFAULT_SESSION_ROOT = process.env.COMPUTEX_SESSION_ROOT || "C:/computex/projects";
 const DEFAULT_WORKSPACE_ROOT = process.env.COMPUTEX_WORKSPACE_ROOT || "C:/computex/workspaces";
@@ -164,7 +167,7 @@ const WORKSPACE_PRESETS = [
     key: "cpp",
     name: "C/C++ Workspace",
     tools: ["cpp", "git", "docker"],
-    image_key: process.env.COMPUTEX_IMAGE_CPP || "computex-cpp",
+    image_key: DEFAULT_CPP_INTERPRETER_IMAGE,
   },
   {
     key: "php",
@@ -1552,7 +1555,7 @@ function inferImageForTools(selectedTools = []) {
   if (tools.has("dotnet")) return process.env.COMPUTEX_IMAGE_DOTNET || "computex-dotnet";
   if (tools.has("rust")) return process.env.COMPUTEX_IMAGE_RUST || "computex-rust";
   if (tools.has("java")) return DEFAULT_JAVA_INTERPRETER_IMAGE;
-  if (tools.has("cpp")) return process.env.COMPUTEX_IMAGE_CPP || "computex-cpp";
+  if (tools.has("cpp")) return DEFAULT_CPP_INTERPRETER_IMAGE;
   if (tools.has("php")) return DEFAULT_PHP_INTERPRETER_IMAGE;
   if (tools.has("go")) return process.env.COMPUTEX_IMAGE_GO || "computex-go";
   if (tools.has("jupyter")) return process.env.COMPUTEX_IMAGE_DATA || "computex-data";
@@ -1995,6 +1998,8 @@ async function finalizePreparedSessionLaunch(prepared, { persistExisting = false
       );
       if (persistExisting) {
         await updateSessionLaunchRow(baseSession);
+      } else {
+        await insertSessionRow(baseSession);
       }
       return {
         session: baseSession,
@@ -2068,7 +2073,7 @@ async function finalizePreparedSessionLaunch(prepared, { persistExisting = false
 
 async function createSessionLaunchForUser(userId, launchBody = {}) {
   const prepared = await prepareSessionLaunchForUser(userId, launchBody);
-  const result = await finalizePreparedSessionLaunch(prepared);
+  const result = await finalizePreparedSessionLaunch(prepared, { tolerateHostTimeout: true });
   // For sync launches, wait for the host to report the access URL
   const startWait = Date.now();
   const timeoutMs = 60000; // 1 minute
@@ -2083,7 +2088,12 @@ async function createSessionLaunchForUser(userId, launchBody = {}) {
     }
   }
   if (!result.session.access_url) {
-    throw createStatusError(500, "Timed out waiting for session to start");
+    result.launch = {
+      ...(result.launch || {}),
+      pending: true,
+      access_url: null,
+      access_password: result.session.access_password || result?.launch?.access_password || null,
+    };
   }
   return result;
 }

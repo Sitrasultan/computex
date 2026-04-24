@@ -759,6 +759,9 @@ class ComputeXHostDashboard(tk.Tk):
         return box
 
     def _log_activity(self, message):
+        if threading.current_thread() is not threading.main_thread():
+            self.after(0, lambda: self._log_activity(message))
+            return
         self.docker.record_activity(message)
         if hasattr(self, "activity_list"):
             ts = datetime.now(timezone.utc).strftime("%H:%M")
@@ -774,6 +777,14 @@ class ComputeXHostDashboard(tk.Tk):
             self.after(0, lambda: self._log_activity("Preparing coding images during startup..."))
             ok, msg = self.docker.prepare_coding_images(force=False)
             self.after(0, lambda: self._log_activity(msg if ok else f"Coding image prepare warning: {msg}"))
+            self.after(0, lambda: self._log_activity("Preparing coding runtime assets during startup..."))
+            assets_ok, assets_msg = self.docker.prepare_coding_runtime_assets(force=False)
+            self.after(
+                0,
+                lambda: self._log_activity(
+                    assets_msg if assets_ok else f"Coding runtime asset prepare warning: {assets_msg}"
+                ),
+            )
 
         self.startup_image_prepare_thread = threading.Thread(target=worker, daemon=True)
         self.startup_image_prepare_thread.start()
