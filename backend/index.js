@@ -315,7 +315,8 @@ async function initDb() {
       workspace_id TEXT,
       workspace_path TEXT,
       preset_key TEXT,
-      selected_tools TEXT
+      selected_tools TEXT,
+      created_files_count INTEGER
     )
   `);
 
@@ -474,6 +475,7 @@ async function migrateDb() {
     "ALTER TABLE sessions ADD COLUMN workspace_path TEXT",
     "ALTER TABLE sessions ADD COLUMN preset_key TEXT",
     "ALTER TABLE sessions ADD COLUMN selected_tools TEXT",
+    "ALTER TABLE sessions ADD COLUMN created_files_count INTEGER",
     "ALTER TABLE workspaces ADD COLUMN image_key TEXT",
     "ALTER TABLE workspaces ADD COLUMN selected_tools TEXT",
     "ALTER TABLE workspaces ADD COLUMN preset_key TEXT",
@@ -1066,6 +1068,16 @@ async function autoStopSessionForInactivity(session, lastActivityAt) {
     }
   }
 
+  try {
+    const createdFilesCount = await getSessionCreatedFilesCount(session, session.user_id);
+    await run("UPDATE sessions SET created_files_count = ? WHERE id = ?", [createdFilesCount, session.id]);
+  } catch (err) {
+    fastify.log.warn(
+      { sessionId: session.id, err: err?.message || err },
+      "session.inactivity.created_files_count.failed"
+    );
+  }
+
   await insertAuditLog({
     eventType: "session.auto_stop.inactive",
     actorUserId: session.user_id,
@@ -1448,6 +1460,53 @@ async function readSessionFile(session, userId, relativePath) {
   }
 }
 
+async function getSessionCreatedFilesCount(session, userId) {
+  if (!session || (session.environment_type || "coding") !== "coding") {
+    return 0;
+  }
+
+  try {
+    const listing = await listSessionFiles(session, userId);
+    return Array.isArray(listing?.files) ? listing.files.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function normalizeSessionForDashboard(session = {}) {
+  return {
+    ...session,
+    runtime_label: getSessionRuntimeLabel(session),
+    created_files_count: Number.isFinite(Number(session.created_files_count))
+      ? Number(session.created_files_count)
+      : null,
+  };
+}
+
+async function enrichDashboardSessionsForUser(sessions = [], userId) {
+  const normalized = sessions.map((session) => normalizeSessionForDashboard(session));
+  const unresolved = normalized
+    .filter(
+      (session) =>
+        session.created_files_count == null &&
+        (session.environment_type || "coding") === "coding" &&
+        ["running", "open", "stopped", "completed"].includes(session.status)
+    )
+    .slice(0, 8);
+
+  await Promise.all(
+    unresolved.map(async (session) => {
+      const count = await getSessionCreatedFilesCount(session, userId);
+      session.created_files_count = count;
+      try {
+        await run("UPDATE sessions SET created_files_count = ? WHERE id = ?", [count, session.id]);
+      } catch {}
+    })
+  );
+
+  return normalized;
+}
+
 async function isSessionEmptyForCleanup(session) {
   const userId = session?.user_id;
   if (!userId) return false;
@@ -1705,6 +1764,44 @@ function createStatusError(statusCode, message) {
   return error;
 }
 
+const RUNTIME_LABEL_MAP = {
+  python: "Python",
+  node: "Node.js",
+  php: "PHP",
+  java: "Java",
+  cpp: "C/C++",
+  go: "Go",
+  rust: "Rust",
+  dotnet: ".NET",
+  flutter: "Flutter",
+  data: "Data Science",
+  fullstack: "Fullstack",
+  devops: "DevOps",
+};
+
+function getSessionRuntimeLabel(session = {}) {
+  const presetKey = String(session?.preset_key || "").trim().toLowerCase();
+  if (presetKey && RUNTIME_LABEL_MAP[presetKey]) {
+    return RUNTIME_LABEL_MAP[presetKey];
+  }
+
+  const image = String(session?.image || "").toLowerCase();
+  if (image.includes("python")) return "Python";
+  if (image.includes("node")) return "Node.js";
+  if (image.includes("php")) return "PHP";
+  if (image.includes("java")) return "Java";
+  if (image.includes("cpp") || image.includes("c++")) return "C/C++";
+  if (image.includes("dotnet") || image.includes(".net")) return ".NET";
+  if (image.includes("go")) return "Go";
+  if (image.includes("rust")) return "Rust";
+  if (image.includes("flutter")) return "Flutter";
+
+  if ((session?.environment_type || "coding") === "coding") {
+    return "Coding";
+  }
+  return "General";
+}
+
 function serializeSessionRow(session) {
   return [
     session.id,
@@ -1723,19 +1820,20 @@ function serializeSessionRow(session) {
     session.workspace_path,
     session.preset_key,
     session.selected_tools,
+    Number.isFinite(Number(session.created_files_count)) ? Number(session.created_files_count) : null,
   ];
 }
 
 async function insertSessionRow(session) {
   await run(
-    "INSERT INTO sessions (id, title, status, started_at, ended_at, host_id, user_id, environment_type, image, container_name, access_url, access_password, workspace_id, workspace_path, preset_key, selected_tools) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO sessions (id, title, status, started_at, ended_at, host_id, user_id, environment_type, image, container_name, access_url, access_password, workspace_id, workspace_path, preset_key, selected_tools, created_files_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     serializeSessionRow(session)
   );
 }
 
 async function updateSessionLaunchRow(session) {
   await run(
-    "UPDATE sessions SET title = ?, status = ?, ended_at = ?, host_id = ?, environment_type = ?, image = ?, container_name = ?, access_url = ?, access_password = ?, workspace_id = ?, workspace_path = ?, preset_key = ?, selected_tools = ? WHERE id = ?",
+    "UPDATE sessions SET title = ?, status = ?, ended_at = ?, host_id = ?, environment_type = ?, image = ?, container_name = ?, access_url = ?, access_password = ?, workspace_id = ?, workspace_path = ?, preset_key = ?, selected_tools = ?, created_files_count = ? WHERE id = ?",
     [
       session.title,
       session.status,
@@ -1750,6 +1848,7 @@ async function updateSessionLaunchRow(session) {
       session.workspace_path,
       session.preset_key,
       session.selected_tools,
+      Number.isFinite(Number(session.created_files_count)) ? Number(session.created_files_count) : null,
       session.id,
     ]
   );
@@ -1774,6 +1873,7 @@ async function updateSessionLaunchProgress(sessionId, updates = {}) {
     workspace_path: updates.workspace_path ?? current.workspace_path,
     preset_key: updates.preset_key ?? current.preset_key,
     selected_tools: updates.selected_tools ?? current.selected_tools,
+    created_files_count: updates.created_files_count ?? current.created_files_count,
   };
 
   await updateSessionLaunchRow(nextSession);
@@ -3283,6 +3383,7 @@ fastify.get("/api/dashboard", { preHandler: authGuard }, async (request, reply) 
       5000,
       "dashboard sessions"
     );
+    const sessionsWithSummary = await enrichDashboardSessionsForUser(sessions, userId);
     const notifications = await withTimeout(
       all("SELECT * FROM notifications ORDER BY created_at DESC LIMIT 20"),
       5000,
@@ -3297,7 +3398,7 @@ fastify.get("/api/dashboard", { preHandler: authGuard }, async (request, reply) 
     if (DASHBOARD_FAST_MODE) {
       return {
         credits,
-        sessions,
+        sessions: sessionsWithSummary,
         containers: [],
         notifications,
         hosts,
@@ -3340,7 +3441,7 @@ fastify.get("/api/dashboard", { preHandler: authGuard }, async (request, reply) 
 
     return {
       credits,
-      sessions,
+      sessions: sessionsWithSummary,
       containers: [],
       notifications,
       hosts: hostPayload,
@@ -3695,9 +3796,10 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
   }
   if (session.status === "stopped" || session.status === "completed" || session.ended_at) {
     const credits = await ensureCredits(userId);
+    const normalizedSession = normalizeSessionForDashboard(session);
     return reply.send({
       message: "Session already stopped",
-      session,
+      session: normalizedSession,
       credits,
       billed_minutes: 0,
       billed_etb: 0,
@@ -3740,6 +3842,9 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
     });
   }
 
+  const createdFilesCount = await getSessionCreatedFilesCount(session, userId);
+  await run("UPDATE sessions SET created_files_count = ? WHERE id = ?", [createdFilesCount, id]);
+
   const billedMinutes = getSessionActiveMinutes(session, endedAt);
   const billedEtb = Number((billedMinutes * BILLING_ETB_PER_MINUTE).toFixed(2));
   const credits = await ensureCredits(userId);
@@ -3766,7 +3871,12 @@ fastify.get("/api/sessions/:id/stop", { preHandler: authGuard }, async (request,
 
   return reply.send({
     message: "Session stopped",
-    session: { ...session, status: "stopped", ended_at: endedAt },
+    session: normalizeSessionForDashboard({
+      ...session,
+      status: "stopped",
+      ended_at: endedAt,
+      created_files_count: createdFilesCount,
+    }),
     credits: updatedCredits,
     workspace: createdWorkspace,
     billed_minutes: billedMinutes,

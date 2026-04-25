@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { requestWithFallback } from "../utils/api";
 import { emitSessionStart, createAppSocket } from "../utils/socket";
+import BrandLogo from "../components/BrandLogo";
 
 const FALLBACK_ENVIRONMENTS = [
   {
@@ -310,7 +311,12 @@ export default function SessionLaunchPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm uppercase tracking-[0.25em] text-sky-300/80">ComputeX</div>
+            <BrandLogo
+              size={34}
+              subtitle="Session Launcher"
+              textClassName="text-base text-sky-200 dark:text-sky-200"
+              className="w-fit"
+            />
             <h1 className="mt-2 text-3xl font-bold">Choose Environment</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">Pick an environment to continue into the launch flow.</p>
           </div>

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "../components/ThemeToggle";
+import BrandLogo from "../components/BrandLogo";
 import {
   registerHost,
   requestHostEmailCode,
@@ -145,9 +146,7 @@ export default function HostRegister() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition">
       <header className="w-full flex justify-between items-center p-4">
         <div className="flex items-center gap-3">
-          <a href="/" className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
-            ComputeX
-          </a>
+          <BrandLogo size={40} textClassName="text-2xl" />
           <span className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400">
             Host Registration
           </span>

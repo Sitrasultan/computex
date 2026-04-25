@@ -5,6 +5,7 @@ import "./dashboard.css";
 import { api, requestWithFallback } from "../utils/api";
 import { createAppSocket, emitSessionStart } from "../utils/socket";
 import SessionComponent from "../components/SessionComponent"; 
+import BrandLogo from "../components/BrandLogo";
 
 import ContainerCard from "../components/ContainerCard";
 
@@ -72,6 +73,26 @@ const formatLastSeen = (ts) => {
   if (!ts) return "never";
   return new Date(ts).toLocaleTimeString();
 };
+
+const formatRuntimeLabel = (session = {}) => {
+  if (session.runtime_label) return session.runtime_label;
+  const preset = String(session.preset_key || "").toLowerCase();
+  if (preset === "python") return "Python";
+  if (preset === "node") return "Node.js";
+  if (preset === "php") return "PHP";
+  if (preset === "java") return "Java";
+  if (preset === "cpp") return "C/C++";
+  if (preset === "dotnet") return ".NET";
+  if (preset === "go") return "Go";
+  if (preset === "rust") return "Rust";
+  return "Coding";
+};
+
+const formatCreatedFilesCount = (value) => {
+  if (!Number.isFinite(Number(value))) return "0 files";
+  const count = Math.max(0, Number(value));
+  return count === 1 ? "1 file" : `${count} files`;
+};
 // ---------- Sidebar ----------
 function Sidebar({ open, onClose, theme }) {
   const isDark = theme === "dark";
@@ -95,7 +116,7 @@ function Sidebar({ open, onClose, theme }) {
       >
         <div className="flex-1 flex flex-col px-3 py-4">
           <div className="flex items-center justify-between h-12">
-            <div className="text-xl font-extrabold tracking-tight">CX</div>
+            <BrandLogo size={34} showText={false} className="shrink-0" />
             <button onClick={onClose} className="sm:hidden text-slate-400 text-xl">
               ✕
             </button>
@@ -498,6 +519,9 @@ function OverviewBanner({ credits, sessions = [], theme }) {
                <div className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"} mt-1`}>
   Duration: {timers[s.id] || "0m 0s"}
 </div>
+                <div className={`text-[11px] ${isDark ? "text-slate-500" : "text-slate-500"} mt-1`}>
+                  Runtime: {formatRuntimeLabel(s)} | Created: {formatCreatedFilesCount(s.created_files_count)}
+                </div>
 
                 
            </div>
@@ -757,7 +781,7 @@ function StartSessionButton() {
 // ---------- MAIN DASHBOARD ----------
 export default function ComputeXDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
   const openedLaunchSessionRef = useRef(new Set());
 
   const [credits, setCredits] = useState({
@@ -1015,7 +1039,7 @@ useEffect(() => {
 
   // Load saved theme
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
+    const savedTheme = localStorage.getItem("theme") || "dark";
     setTheme(savedTheme);
   }, []);
 

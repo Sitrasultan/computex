@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { requestWithFallback } from "../utils/api";
 import { createAppSocket, emitSessionStart } from "../utils/socket";
+import BrandLogo from "../components/BrandLogo";
 
 const WORKSPACE_LOAD_TIMEOUT_MS = 10000;
 const SESSION_LAUNCH_TIMEOUT_MS = 3 * 60 * 1000;
@@ -206,7 +207,12 @@ export default function WorkspaceManagerPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm uppercase tracking-[0.25em] text-sky-300/80">ComputeX</div>
+            <BrandLogo
+              size={34}
+              subtitle="Workspace Manager"
+              textClassName="text-base text-sky-200 dark:text-sky-200"
+              className="w-fit"
+            />
             <h1 className="mt-2 text-3xl font-bold">Workspaces</h1>
             <p className="mt-1 text-sm text-slate-400">Create, configure, and resume persistent coding workspaces.</p>
           </div>

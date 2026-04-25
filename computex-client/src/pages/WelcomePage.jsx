@@ -1,15 +1,14 @@
 import Hero from "../components/Hero";
 import AuthPanel from "../components/AuthPanel";
 import ThemeToggle from "../components/ThemeToggle";
+import BrandLogo from "../components/BrandLogo";
 
 export default function WelcomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition">
       {/* Header */}
       <header className="w-full flex justify-between items-center p-4">
-        <h1 className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
-          ComputeX
-        </h1>
+        <BrandLogo size={42} textClassName="text-2xl" />
         <ThemeToggle />
       </header>
 

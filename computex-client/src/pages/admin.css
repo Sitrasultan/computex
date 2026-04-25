@@ -22,6 +22,10 @@
   margin-bottom: 28px;
 }
 
+.admin-brand-logo {
+  flex-shrink: 0;
+}
+
 .admin-brand-mark {
   width: 48px;
   height: 48px;

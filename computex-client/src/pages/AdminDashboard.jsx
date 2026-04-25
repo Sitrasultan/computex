@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "../utils/api";
+import BrandLogo from "../components/BrandLogo";
 import "./admin.css";
 
 const sections = [
@@ -626,7 +627,7 @@ export default function AdminDashboard() {
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <span className="admin-brand-mark">CX</span>
+          <BrandLogo size={48} className="admin-brand-logo" showText={false} />
           <div>
             <strong>ComputeX Admin</strong>
             <p>Visibility and control</p>

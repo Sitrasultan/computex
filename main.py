@@ -1,4 +1,5 @@
 ﻿import ctypes
+import math
 import os
 import platform
 import shutil
@@ -68,6 +69,9 @@ class ComputeXHostDashboard(tk.Tk):
         self.watch_job = None
         self.startup_image_prepare_thread = None
         self._dashboard_scroll_canvas = None
+        self._prestart_after_job = None
+        self._prestart_start_time = None
+        self._prestart_logo = None
 
         self.cpu_var = tk.IntVar(value=0)
         self.ram_var = tk.IntVar(value=0)
@@ -112,6 +116,9 @@ class ComputeXHostDashboard(tk.Tk):
             pass
 
     def _clear_root(self):
+        if self._prestart_after_job:
+            self.after_cancel(self._prestart_after_job)
+            self._prestart_after_job = None
         self.unbind_all("<MouseWheel>")
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
@@ -140,6 +147,9 @@ class ComputeXHostDashboard(tk.Tk):
         return tk.Entry(parent, textvariable=variable, show=show, bg=self.colors["soft"], fg=self.colors["text"], insertbackground=self.colors["text"], relief="flat", bd=0, font=("Segoe UI", 11))
 
     def _start_launch_flow(self):
+        self._show_prestart_screen()
+
+    def _begin_bootstrap(self):
         self._show_launch_screen()
         threading.Thread(target=self._bootstrap_host, daemon=True).start()
 
@@ -182,6 +192,146 @@ class ComputeXHostDashboard(tk.Tk):
             wraplength=920,
             font=("Segoe UI", 12),
         ).pack(anchor="w", padx=34)
+
+    def _show_prestart_screen(self):
+        self._clear_root()
+        panel = tk.Frame(
+            self.root_container,
+            bg=self.colors["panel"],
+            highlightbackground=self.colors["stroke"],
+            highlightthickness=1,
+        )
+        panel.grid(row=0, column=0, sticky="nsew", padx=32, pady=32)
+        panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(2, weight=1)
+
+        tk.Label(
+            panel,
+            text="ComputeX",
+            bg=self.colors["panel"],
+            fg=self.colors["text"],
+            font=("Segoe UI Semibold", 30),
+        ).grid(row=0, column=0, pady=(24, 2))
+        tk.Label(
+            panel,
+            text="Host Agent Initialization",
+            bg=self.colors["panel"],
+            fg=self.colors["muted"],
+            font=("Segoe UI", 11),
+        ).grid(row=1, column=0, pady=(0, 8))
+
+        canvas = tk.Canvas(
+            panel,
+            bg=self.colors["panel"],
+            highlightthickness=0,
+            bd=0,
+            width=820,
+            height=470,
+        )
+        canvas.grid(row=2, column=0, sticky="nsew", padx=20, pady=(6, 10))
+
+        self._prestart_start_time = time.time()
+        duration_s = 5.6
+
+        logo_path = _resource_path(os.path.join("assets", "computex-preview.png"))
+        if os.path.exists(logo_path):
+            try:
+                logo_image = tk.PhotoImage(file=logo_path)
+                target_logo_px = 140
+                scale = max(1, int(round(max(logo_image.width(), logo_image.height()) / target_logo_px)))
+                self._prestart_logo = logo_image.subsample(scale, scale) if scale > 1 else logo_image
+            except Exception:
+                self._prestart_logo = None
+        else:
+            self._prestart_logo = None
+
+        cx = 410
+        cy = 235
+        rings = [
+            canvas.create_oval(0, 0, 0, 0, outline="#2A4D72", width=2),
+            canvas.create_oval(0, 0, 0, 0, outline="#2E628F", width=2),
+            canvas.create_oval(0, 0, 0, 0, outline="#3E89B8", width=2),
+            canvas.create_oval(0, 0, 0, 0, outline="#49B6CC", width=2),
+        ]
+        sweep = canvas.create_line(cx, cy, cx + 140, cy, fill="#7EDBFF", width=3)
+        halo = canvas.create_oval(cx - 82, cy - 82, cx + 82, cy + 82, outline="#5BA5DF", width=3)
+        glow = canvas.create_oval(cx - 96, cy - 96, cx + 96, cy + 96, outline="#2E5677", width=2)
+        progress_track = canvas.create_rectangle(250, 390, 570, 402, outline="#274966", width=1)
+        progress_fill = canvas.create_rectangle(252, 392, 252, 400, outline="", fill="#4ED6C5")
+        loading_text = canvas.create_text(
+            cx,
+            432,
+            text="Synchronizing host systems",
+            fill="#9BC2EA",
+            font=("Segoe UI", 11),
+        )
+
+        if self._prestart_logo:
+            logo = canvas.create_image(cx, cy, image=self._prestart_logo)
+            logo_text = None
+        else:
+            logo = None
+            logo_text = canvas.create_text(
+                cx,
+                cy,
+                text="CX",
+                fill="#EAF4FF",
+                font=("Segoe UI Semibold", 44),
+            )
+
+        def animate():
+            elapsed = time.time() - self._prestart_start_time
+            progress = min(1.0, elapsed / duration_s)
+            cw = max(640, canvas.winfo_width())
+            ch = max(360, canvas.winfo_height())
+            cx = cw / 2
+            cy = (ch / 2) - 26
+
+            for idx, ring in enumerate(rings):
+                radius = 88 + (idx * 26) + (math.sin((elapsed * 2.3) + idx) * 6)
+                canvas.coords(ring, cx - radius, cy - radius, cx + radius, cy + radius)
+
+            halo_radius = 83 + (math.sin(elapsed * 4.4) * 5)
+            glow_radius = 96 + (math.sin(elapsed * 3.1) * 4)
+            canvas.coords(halo, cx - halo_radius, cy - halo_radius, cx + halo_radius, cy + halo_radius)
+            canvas.coords(glow, cx - glow_radius, cy - glow_radius, cx + glow_radius, cy + glow_radius)
+
+            angle = elapsed * 3.2
+            sweep_x = cx + math.cos(angle) * 162
+            sweep_y = cy + math.sin(angle) * 162
+            canvas.coords(sweep, cx, cy, sweep_x, sweep_y)
+
+            track_left = cx - 160
+            track_right = cx + 160
+            track_top = cy + 178
+            track_bottom = track_top + 12
+            fill_right = track_left + (320 * progress)
+            safe_fill_right = max(track_left + 2, fill_right - 2)
+            canvas.coords(progress_track, track_left, track_top, track_right, track_bottom)
+            canvas.coords(progress_fill, track_left + 2, track_top + 2, safe_fill_right, track_bottom - 2)
+            canvas.coords(loading_text, cx, track_bottom + 30)
+
+            y_shift = math.sin(elapsed * 3.6) * 3
+            if logo:
+                canvas.coords(logo, cx, cy + y_shift)
+            if logo_text:
+                canvas.coords(logo_text, cx, cy + y_shift)
+
+            if progress < 0.35:
+                canvas.itemconfig(loading_text, text="Synchronizing host systems")
+            elif progress < 0.7:
+                canvas.itemconfig(loading_text, text="Warming container runtime")
+            else:
+                canvas.itemconfig(loading_text, text="Finalizing startup sequence")
+
+            if progress >= 1.0:
+                self._prestart_after_job = None
+                self._begin_bootstrap()
+                return
+
+            self._prestart_after_job = self.after(33, animate)
+
+        animate()
 
     def _wizard_shell(self, step_title, subtitle, step_no):
         self._clear_root()
