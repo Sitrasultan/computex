@@ -751,7 +751,7 @@ class ComputeXHostDashboard(tk.Tk):
             return psutil.virtual_memory().available / (1024 ** 3)
         except Exception:
             return float(self._total_ram_gb())
-
+ 
     def _disk_usage(self):
         try:
             total, _, free = shutil.disk_usage(os.path.abspath(os.sep))
