@@ -360,8 +360,7 @@ This project was developed as a Final Year Project for academic and research pur
 **Sitra Sultan**
 
 - GitHub: https://github.com/Sitrasultan
-- LinkedIn: *(Add your LinkedIn profile)*
-- Portfolio: *(Add your portfolio URL once deployed)*
+
 
 ---
 
